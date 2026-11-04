@@ -43,6 +43,8 @@ Each schedule item has a kind, title, description, local start/end times, timezo
 
 `normalize_request()` trims and deduplicates destinations without changing their order, derives an omitted title and applies documented defaults. It enforces 1–21 days, positive traveler counts and budgets, a three-letter reporting currency and required destinations/duration. A per-person budget requires an explicitly known traveler count before conversion. After conversion, edits operate on the group budget, so a traveler-count-only edit does not multiply it again.
 
+The interpreter supplies `RequestDraft.destination_currencies` using the resolved places. Without a specified currency, normalization chooses the shared local currency, or THB when destinations use different currencies. Unknown local currencies require clarification rather than a silent USD fallback. A stated budget still requires its own unambiguous currency. Explicit currencies and existing saved-plan currencies are preserved. Planning instructions require estimated conversion rates to be disclosed; there is no live foreign-exchange integration.
+
 The interpreter resolves linguistic ambiguities, explicit corrections and dates using the configured local date/timezone. Python does not trust an AI readiness flag: the prompt collection state, clarification result and normalized request govern the handoff. Prompts distinguish instructions from serialized user data.
 
 `build_plan()` checks:

@@ -39,7 +39,14 @@ def normalize_request(draft: RequestDraft) -> TripRequest:
         raise ValueError("Which currency is your budget in? For example, USD, JPY, or THB.")
     if draft.budget_per_person and (draft.travelers is None or draft.travelers_explicit is not True):
         raise ValueError("How many people are traveling? I need this to convert your per-person budget to the group total.")
-    currency = (draft.currency or "USD").strip().upper()
+    local_currencies = {code.strip().upper() for code in draft.destination_currencies or []}
+    if any(not re.fullmatch(r"[A-Z]{3}", code) for code in local_currencies):
+        raise ValueError("Please clarify the destinations' local currencies using codes such as JPY or THB.")
+    currency = (draft.currency or "").strip().upper()
+    if not currency:
+        if not local_currencies:
+            raise ValueError("Which local currency should I use for these destinations' estimates?")
+        currency = next(iter(local_currencies)) if len(local_currencies) == 1 else "THB"
     if not re.fullmatch(r"[A-Z]{3}", currency):
         raise ValueError("Which three-letter currency code should I use? For example, USD, JPY, or THB.")
     travelers = draft.travelers or 1

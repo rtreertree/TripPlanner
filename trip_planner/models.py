@@ -19,6 +19,7 @@ class RequestDraft(Model):
     duration_days: int | None = None
     budget: float | None = None
     currency: str | None = None
+    destination_currencies: list[str] | None = None
     preferences: str | None = None
     start_date: date | None = None
     travelers: int | None = None
@@ -33,7 +34,7 @@ class TripRequest(Model):
     destinations: list[str]
     duration_days: int
     budget: float | None = None
-    currency: str = "USD"
+    currency: str
     preferences: str = ""
     start_date: date | None = None
     travelers: int = 1

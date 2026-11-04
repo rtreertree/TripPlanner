@@ -231,6 +231,10 @@ class Application:
             self.session.stage = "clarify"
             self.persist()
             return
+        if self.session.draft.currency is None:
+            currencies = {code.strip().upper() for code in self.session.draft.destination_currencies or []}
+            reason = "the destinations use different currencies" if len(currencies) > 1 else "the destinations share this local currency"
+            self.session.pending["assumptions"].append(f"Estimates are reported in {request.currency} because {reason}.")
         # Once converted, budgets remain group totals when traveler count changes.
         self.session.draft = RequestDraft.model_validate({**request.model_dump(), "budget_per_person": False,
                                                           "travelers_explicit": self.session.draft.travelers_explicit})

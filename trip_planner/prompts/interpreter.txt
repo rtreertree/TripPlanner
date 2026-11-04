@@ -19,10 +19,24 @@ preferences. Retain Unicode names, must-visits, accessibility needs, exclusions,
 food interests, origin, transport, and other constraints in preferences.
 
 Defaults will be applied locally: one traveler, balanced pace, no budget limit,
-USD reporting currency, and numbered days when no date is specified. Record each
+and numbered days when no date is specified. Record each
 relevant assumption. Do not ask follow-ups just for omitted optional information.
 Do not treat omission of an optional value as an instruction to erase an existing
 value. Distinguish an explicit request to remove a budget from no budget update.
+
+Infer destination_currencies from the resolved destinations, using their local
+three-letter currency codes. Include the currency of every destination, even when
+several destinations share one currency. Do not default estimates to USD.
+For a new trip without a user-specified currency, leave currency=null: Python uses
+the shared local currency when all destinations use the same currency, or THB
+when destinations use different currencies. For example, Tokyo then Kyoto uses
+JPY, Tokyo then Seoul uses THB, and Paris then Rome uses EUR. Record this choice
+in assumptions. Ask about the destination only if its location/currency cannot
+be inferred confidently. A broad region spanning currencies uses THB.
+An explicitly supplied budget/reporting currency takes precedence. Never infer
+the currency of an ambiguous stated budget from the destination. Preserve an
+existing plan's reporting currency and budget on edits unless the user requests
+a currency change; never relabel an existing amount as another currency.
 
 Budget is for the whole traveling group for the entire trip. An unqualified amount
 means group total. Ask what currency an ambiguous amount uses (including an

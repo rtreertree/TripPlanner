@@ -50,3 +50,7 @@ No live OpenAI smoke test was performed. Live interpretation/planning therefore 
 Browser tooling denied the local `file:` URL under its security policy. Desktop/narrow visual inspection and browser PDF output were consequently not verified; automated tests check responsive/print rules, standalone assets and HTML content/escaping.
 
 Travel information is estimated, with no live booking, routing, prices, hours or availability integration. Domain validation cannot establish real geographic feasibility. Trips are limited to 21 days, local files are unencrypted, and one application process should write a given trip at a time. Undated schedules disclose representative-date timezone arithmetic and the need to check seasonal clock changes.
+
+## Currency-default update
+
+Estimates now default to the destinations' shared local currency, or THB when destinations use different currencies. The interpreter identifies local currencies; Python selects the reporting currency before planning and records the choice in the saved assumptions. Explicit budget/reporting currencies and saved-plan currencies remain preserved, and ambiguous budgets still require clarification. Planning instructions disclose estimated conversion-rate assumptions. Schemas, README and technical documentation were updated. The updated offline suite passes **144 tests**, including same-currency destinations, different-currency destinations, explicit overrides, ambiguity, and the structured handoff. No live API or exchange-rate lookup was performed.

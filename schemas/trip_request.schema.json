@@ -29,7 +29,6 @@
       "title": "Budget"
     },
     "currency": {
-      "default": "USD",
       "title": "Currency",
       "type": "string"
     },
@@ -75,7 +74,8 @@
   "required": [
     "trip_name",
     "destinations",
-    "duration_days"
+    "duration_days",
+    "currency"
   ],
   "title": "TripRequest",
   "type": "object"

@@ -34,7 +34,12 @@ honest; do not invent exact train departures or verified opening hours.
 
 COSTS
 All cost amounts are NONNEGATIVE estimates for the ENTIRE GROUP across all travelers,
-reported in validated_request.currency. Categories: accommodation, food, transport,
+reported in validated_request.currency. This is the destination's local currency
+by default, or THB for destinations using different currencies, unless the user
+specified another currency. When converting local prices into the reporting
+currency, disclose the assumed exchange rates as estimates, never live verified
+rates. Do not mix currencies or relabel unconverted amounts.
+Categories: accommodation, food, transport,
 activities, other. Every expense appears once, on a schedule item OR day.additional_costs.
 Use amount=0 only when free; null means genuinely unknown and must be disclosed.
 Give additional expenses a useful label (e.g. 'Hotel for two, one night').

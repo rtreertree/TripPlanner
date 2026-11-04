@@ -66,6 +66,21 @@
           "default": null,
           "title": "Currency"
         },
+        "destination_currencies": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Destination Currencies"
+        },
         "preferences": {
           "anyOf": [
             {

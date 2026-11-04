@@ -9,9 +9,10 @@ from trip_planner.validation import build_plan, normalize_request, payload_from_
 
 
 def test_request_defaults_unicode_and_destination_order():
-    request = normalize_request(RequestDraft(destinations=[" 京都 ", "Tokyo", "京都", "tokyo"], duration_days=3))
+    request = normalize_request(RequestDraft(destinations=[" 京都 ", "Tokyo", "京都", "tokyo"], duration_days=3,
+                                             destination_currencies=["JPY", "JPY"]))
     assert request.destinations == ["京都", "Tokyo"]
-    assert request.travelers == 1 and request.pace == "balanced" and request.currency == "USD"
+    assert request.travelers == 1 and request.pace == "balanced" and request.currency == "JPY"
     assert request.budget is None and request.start_date is None
 
 
@@ -50,6 +51,43 @@ def test_models_reject_extra_fields_and_nonfinite_money():
         RequestDraft(destination="Tokyo")
     with pytest.raises(ValidationError):
         RequestDraft(budget=float("inf"))
+
+
+@pytest.mark.parametrize("destinations,currencies,expected", [
+    (["Tokyo", "Kyoto"], ["JPY", "JPY"], "JPY"),
+    (["Paris", "Rome"], ["EUR", "EUR"], "EUR"),
+    (["Tokyo", "Seoul"], ["JPY", "KRW"], "THB"),
+    (["Tokyo", "Bangkok"], ["JPY", "THB"], "THB"),
+    (["Bangkok"], [" thb "], "THB"),
+])
+def test_estimates_use_local_currency_or_thb_for_different_currencies(destinations, currencies, expected):
+    request = normalize_request(RequestDraft(destinations=destinations, duration_days=3,
+                                             destination_currencies=currencies))
+    assert request.currency == expected
+    assert request.budget is None
+
+
+def test_explicit_reporting_currency_overrides_destination_default():
+    request = normalize_request(RequestDraft(destinations=["Tokyo", "Seoul"], duration_days=3,
+                                             destination_currencies=["JPY", "KRW"], currency="EUR", budget=1500))
+    assert request.currency == "EUR" and request.budget == 1500
+
+
+def test_ambiguous_budget_is_not_guessed_from_local_currencies():
+    with pytest.raises(ValueError, match="currency is your budget"):
+        normalize_request(RequestDraft(destinations=["Tokyo"], duration_days=3,
+                                       destination_currencies=["JPY"], budget=500))
+
+
+def test_unknown_destination_currency_requires_clarification():
+    with pytest.raises(ValueError, match="Which local currency"):
+        normalize_request(RequestDraft(destinations=["Somewhere"], duration_days=3))
+
+
+def test_invalid_destination_currency_is_rejected():
+    with pytest.raises(ValueError, match="local currencies"):
+        normalize_request(RequestDraft(destinations=["Tokyo"], duration_days=3,
+                                       destination_currencies=["Japanese yen"]))
 
 
 def test_demo_validates_and_computes_itemized_totals():

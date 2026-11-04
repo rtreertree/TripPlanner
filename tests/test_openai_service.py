@@ -167,7 +167,7 @@ def test_planner_receives_normalized_request_separately_from_interpreter():
     service = Mock()
     service.parse.return_value = PlannerResult(itinerary=None, clarification_question="Add a day?", assistant_message="Too far.")
     service.last_metadata = None
-    request = TripRequest(trip_name="Japan", destinations=["Tokyo", "Kyoto"], duration_days=1)
+    request = TripRequest(trip_name="Japan", destinations=["Tokyo", "Kyoto"], duration_days=1, currency="JPY")
     result = Planner(config(), service).plan(request, instructions="Use trains", feedback="Missing transfer")
     call = service.parse.call_args.kwargs
     assert call["role"] == "planner"

@@ -129,6 +129,31 @@ def test_clarification_resumes_without_reasking_resolved_answers(tmp_path):
     assert app.interpreter.interpret.call_args.kwargs["message"] == "JPY"
 
 
+def test_inferred_local_currency_reaches_planner_and_saved_assumptions(tmp_path):
+    draft = sample_draft().model_copy(update={"currency": None, "budget": None,
+                                             "destination_currencies": ["JPY", "JPY"]})
+    app, _, _ = application(tmp_path, ["Japan", "three days", "Tokyo then Kyoto", "", "", "exit"],
+                            [interpretation(draft=draft)])
+    app.run()
+    assert app.planner.plan.call_args.args[0].currency == "JPY"
+    assert app.plan.budget_summary.currency == "JPY"
+    assert any("JPY" in note and "local currency" in note for note in app.plan.assumptions)
+
+
+def test_different_destination_currencies_select_thb_before_planning(tmp_path):
+    draft = RequestDraft(destinations=["Tokyo", "Seoul"], duration_days=3,
+                         destination_currencies=["JPY", "KRW"])
+    app, _, _ = application(tmp_path, responses=[interpretation(draft=draft)])
+    app.session = Session(answers={"trip_name": "", "duration_days": "three days",
+                                   "destinations": "Tokyo then Seoul", "budget": "", "preferences": ""},
+                          prompt_index=5, stage="interpret")
+    app.interpret()
+    assert app.session.stage == "generate"
+    assert app.session.pending["request"]["currency"] == "THB"
+    assert any("different currencies" in note for note in app.session.pending["assumptions"])
+    app.planner.plan.assert_not_called()
+
+
 def test_resume_by_name_is_offline_and_does_not_regenerate(tmp_path):
     app, _, output = application(tmp_path, ["Japan", "show my plan", "help", "exit"])
     plan, _ = save_fixture(app)
