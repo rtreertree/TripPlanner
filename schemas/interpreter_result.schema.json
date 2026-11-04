@@ -1,0 +1,258 @@
+{
+  "$defs": {
+    "RequestDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "trip_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trip Name"
+        },
+        "destinations": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Destinations"
+        },
+        "duration_days": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Days"
+        },
+        "budget": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Budget"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currency"
+        },
+        "preferences": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preferences"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Date"
+        },
+        "travelers": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Travelers"
+        },
+        "pace": {
+          "anyOf": [
+            {
+              "enum": [
+                "relaxed",
+                "balanced",
+                "packed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pace"
+        },
+        "budget_per_person": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Budget Per Person"
+        },
+        "travelers_explicit": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Travelers Explicit"
+        },
+        "destination_delegated": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Destination Delegated"
+        }
+      },
+      "title": "RequestDraft",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "intent": {
+      "enum": [
+        "create",
+        "edit",
+        "question",
+        "list",
+        "resume",
+        "show",
+        "open",
+        "undo",
+        "cancel",
+        "help",
+        "exit"
+      ],
+      "title": "Intent",
+      "type": "string"
+    },
+    "request_draft": {
+      "$ref": "#/$defs/RequestDraft"
+    },
+    "request_updates": {
+      "$ref": "#/$defs/RequestDraft"
+    },
+    "change_instructions": {
+      "title": "Change Instructions",
+      "type": "string"
+    },
+    "trip_reference": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Trip Reference"
+    },
+    "missing_required_fields": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Missing Required Fields",
+      "type": "array"
+    },
+    "clarification_question": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Clarification Question"
+    },
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Assumptions",
+      "type": "array"
+    },
+    "assistant_message": {
+      "title": "Assistant Message",
+      "type": "string"
+    },
+    "clear_fields": {
+      "items": {
+        "enum": [
+          "budget",
+          "start_date"
+        ],
+        "type": "string"
+      },
+      "title": "Clear Fields",
+      "type": "array"
+    }
+  },
+  "required": [
+    "intent",
+    "request_draft",
+    "request_updates",
+    "change_instructions",
+    "trip_reference",
+    "missing_required_fields",
+    "clarification_question",
+    "assumptions",
+    "assistant_message"
+  ],
+  "title": "InterpreterResult",
+  "type": "object"
+}

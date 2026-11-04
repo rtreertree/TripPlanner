@@ -1,0 +1,835 @@
+{
+  "schema_version": "1.0",
+  "trip_id": "demo-japan",
+  "revision": 1,
+  "created_at": "2026-11-04T14:27:38.208456+00:00",
+  "updated_at": "2026-11-04T14:27:38.208456+00:00",
+  "request": {
+    "trip_name": "Japan · food, temples & quiet corners",
+    "destinations": [
+      "Tokyo, Japan",
+      "Kyoto, Japan"
+    ],
+    "duration_days": 3,
+    "budget": 75000.0,
+    "currency": "JPY",
+    "preferences": "Local food, temples, photography, quiet places. Include Fushimi Inari, prefer trains, avoid nightlife.",
+    "start_date": null,
+    "travelers": 1,
+    "pace": "balanced",
+    "destination_delegated": false
+  },
+  "summary": "Three days of local food, temples, and quieter corners in Tokyo and Kyoto, with a realistic transfer morning.",
+  "days": [
+    {
+      "day_number": 1,
+      "date": null,
+      "title": "Old Tokyo, at your own pace",
+      "summary": "Temple streets, a neighborhood lunch, and green space for an unhurried first day.",
+      "destinations": [
+        "Tokyo"
+      ],
+      "schedule": [
+        {
+          "id": "a90895bb-0d8a-41d8-8711-30fa5514e0ef",
+          "kind": "activity",
+          "title": "Sensō-ji, Asakusa",
+          "description": "A slower morning exploring local culture and taking photographs, suited to the trip's interests.",
+          "start_time": "09:00",
+          "end_time": "11:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 120,
+          "place_name": "Sensō-ji, Asakusa",
+          "location": "Sensō-ji, Asakusa, Tokyo",
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 500.0,
+            "currency": "JPY",
+            "label": "Sensō-ji, Asakusa"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "3ef00bcf-07e0-49ab-9eab-58138a97e580",
+          "kind": "travel",
+          "title": "Sensō-ji, Asakusa → Asakusa lunch district",
+          "description": "Sensō-ji, Asakusa → Asakusa lunch district",
+          "start_time": "11:00",
+          "end_time": "11:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": {
+            "origin": "Sensō-ji, Asakusa",
+            "destination": "Asakusa lunch district",
+            "transport_mode": "walk / local train",
+            "duration_minutes": 30,
+            "route_notes": "Allow time to find platforms and buy tickets; times are estimates."
+          },
+          "cost": {
+            "category": "transport",
+            "amount": 220.0,
+            "currency": "JPY",
+            "label": "Sensō-ji, Asakusa → Asakusa lunch district"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "125c8faf-61e5-431a-a7b8-dd35c6a1405b",
+          "kind": "meal",
+          "title": "Asakusa lunch district",
+          "description": "A casual neighborhood lunch featuring local food; choose a restaurant on arrival.",
+          "start_time": "11:30",
+          "end_time": "12:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 60,
+          "place_name": "Asakusa lunch district",
+          "location": "Asakusa lunch district, Tokyo",
+          "travel": null,
+          "cost": {
+            "category": "food",
+            "amount": 1500.0,
+            "currency": "JPY",
+            "label": "Asakusa lunch district"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "a80cd940-27be-4aaa-8e21-f6ccf771a1bd",
+          "kind": "rest",
+          "title": "Tea and a quiet pause",
+          "description": "Tea and a quiet pause",
+          "start_time": "12:30",
+          "end_time": "13:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 500.0,
+            "currency": "JPY",
+            "label": "Tea and a quiet pause"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "3511e164-891d-4dde-be11-ad02c7dc356b",
+          "kind": "travel",
+          "title": "Asakusa lunch district → Ueno Park",
+          "description": "Asakusa lunch district → Ueno Park",
+          "start_time": "13:00",
+          "end_time": "13:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": {
+            "origin": "Asakusa lunch district",
+            "destination": "Ueno Park",
+            "transport_mode": "train",
+            "duration_minutes": 30,
+            "route_notes": "Allow time to find platforms and buy tickets; times are estimates."
+          },
+          "cost": {
+            "category": "transport",
+            "amount": 220.0,
+            "currency": "JPY",
+            "label": "Asakusa lunch district → Ueno Park"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "d9c6e224-72a8-4b93-b92f-3ca23785abad",
+          "kind": "activity",
+          "title": "Ueno Park",
+          "description": "Explore at a balanced pace, with time for photos and nearby streets rather than rushing between sights.",
+          "start_time": "13:30",
+          "end_time": "15:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 120,
+          "place_name": "Ueno Park",
+          "location": "Ueno Park, Tokyo",
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 1000.0,
+            "currency": "JPY",
+            "label": "Ueno Park"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "1d8e54b4-d7cd-40c8-82ef-761d05143851",
+          "kind": "free_time",
+          "title": "Flexible neighborhood time",
+          "description": "Flexible neighborhood time",
+          "start_time": "15:30",
+          "end_time": "17:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 90,
+          "place_name": null,
+          "location": null,
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 0.0,
+            "currency": "JPY",
+            "label": "Flexible neighborhood time"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "36006892-74c5-4f69-a42a-c5d31116deba",
+          "kind": "travel",
+          "title": "Ueno Park → Ueno dinner district",
+          "description": "Ueno Park → Ueno dinner district",
+          "start_time": "17:00",
+          "end_time": "17:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": {
+            "origin": "Ueno Park",
+            "destination": "Ueno dinner district",
+            "transport_mode": "train",
+            "duration_minutes": 30,
+            "route_notes": "Allow time to find platforms and buy tickets; times are estimates."
+          },
+          "cost": {
+            "category": "transport",
+            "amount": 220.0,
+            "currency": "JPY",
+            "label": "Ueno Park → Ueno dinner district"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "f3d40e52-8781-4793-80d1-369aceb605da",
+          "kind": "meal",
+          "title": "Ueno dinner district",
+          "description": "An informal dinner in a local food district. No reservation or availability is implied.",
+          "start_time": "17:30",
+          "end_time": "19:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 90,
+          "place_name": "Ueno dinner district",
+          "location": "Ueno dinner district, Tokyo",
+          "travel": null,
+          "cost": {
+            "category": "food",
+            "amount": 2500.0,
+            "currency": "JPY",
+            "label": "Ueno dinner district"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        }
+      ],
+      "additional_costs": [
+        {
+          "category": "accommodation",
+          "amount": 11000.0,
+          "currency": "JPY",
+          "label": "One night in a modest hotel, one traveler"
+        }
+      ],
+      "notes": [
+        "Hotel location is assumed central; adjust transfers when accommodation is known.",
+        "Breakfast is assumed included in accommodation."
+      ],
+      "estimated_total_cost": 17660.0
+    },
+    {
+      "day_number": 2,
+      "date": null,
+      "title": "Shrines, gardens & neighborhood food",
+      "summary": "A leafy shrine and a garden-focused afternoon, linked by practical local transfers.",
+      "destinations": [
+        "Tokyo"
+      ],
+      "schedule": [
+        {
+          "id": "4e8fef93-315f-4445-8eb7-32709648a021",
+          "kind": "activity",
+          "title": "Meiji Jingū",
+          "description": "A slower morning exploring local culture and taking photographs, suited to the trip's interests.",
+          "start_time": "09:00",
+          "end_time": "11:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 120,
+          "place_name": "Meiji Jingū",
+          "location": "Meiji Jingū, Tokyo",
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 500.0,
+            "currency": "JPY",
+            "label": "Meiji Jingū"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "860ffe57-89da-493c-a4e8-3d5c941509c5",
+          "kind": "travel",
+          "title": "Meiji Jingū → Omotesandō lunch district",
+          "description": "Meiji Jingū → Omotesandō lunch district",
+          "start_time": "11:00",
+          "end_time": "11:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": {
+            "origin": "Meiji Jingū",
+            "destination": "Omotesandō lunch district",
+            "transport_mode": "walk / local train",
+            "duration_minutes": 30,
+            "route_notes": "Allow time to find platforms and buy tickets; times are estimates."
+          },
+          "cost": {
+            "category": "transport",
+            "amount": 220.0,
+            "currency": "JPY",
+            "label": "Meiji Jingū → Omotesandō lunch district"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "effb1869-0061-4acd-a7fc-170399779e3b",
+          "kind": "meal",
+          "title": "Omotesandō lunch district",
+          "description": "A casual neighborhood lunch featuring local food; choose a restaurant on arrival.",
+          "start_time": "11:30",
+          "end_time": "12:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 60,
+          "place_name": "Omotesandō lunch district",
+          "location": "Omotesandō lunch district, Tokyo",
+          "travel": null,
+          "cost": {
+            "category": "food",
+            "amount": 1500.0,
+            "currency": "JPY",
+            "label": "Omotesandō lunch district"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "0786969c-7db6-4213-9d33-b77cf30752b8",
+          "kind": "rest",
+          "title": "Tea and a quiet pause",
+          "description": "Tea and a quiet pause",
+          "start_time": "12:30",
+          "end_time": "13:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 500.0,
+            "currency": "JPY",
+            "label": "Tea and a quiet pause"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "80ef26b5-d1b0-47a6-b2f0-1f6d45567fe6",
+          "kind": "travel",
+          "title": "Omotesandō lunch district → Nezu Museum garden",
+          "description": "Omotesandō lunch district → Nezu Museum garden",
+          "start_time": "13:00",
+          "end_time": "13:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": {
+            "origin": "Omotesandō lunch district",
+            "destination": "Nezu Museum garden",
+            "transport_mode": "train",
+            "duration_minutes": 30,
+            "route_notes": "Allow time to find platforms and buy tickets; times are estimates."
+          },
+          "cost": {
+            "category": "transport",
+            "amount": 220.0,
+            "currency": "JPY",
+            "label": "Omotesandō lunch district → Nezu Museum garden"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "0ef2a29c-4cd0-4bf6-abb3-3e4c4e992002",
+          "kind": "activity",
+          "title": "Nezu Museum garden",
+          "description": "Explore at a balanced pace, with time for photos and nearby streets rather than rushing between sights.",
+          "start_time": "13:30",
+          "end_time": "15:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 120,
+          "place_name": "Nezu Museum garden",
+          "location": "Nezu Museum garden, Tokyo",
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 1000.0,
+            "currency": "JPY",
+            "label": "Nezu Museum garden"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "ac49bf05-3758-421f-9d11-e71f5dd467ba",
+          "kind": "free_time",
+          "title": "Flexible neighborhood time",
+          "description": "Flexible neighborhood time",
+          "start_time": "15:30",
+          "end_time": "17:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 90,
+          "place_name": null,
+          "location": null,
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 0.0,
+            "currency": "JPY",
+            "label": "Flexible neighborhood time"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "2cf085c3-4575-41db-82b3-9fe8b45f4df2",
+          "kind": "travel",
+          "title": "Nezu Museum garden → Aoyama dinner district",
+          "description": "Nezu Museum garden → Aoyama dinner district",
+          "start_time": "17:00",
+          "end_time": "17:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": {
+            "origin": "Nezu Museum garden",
+            "destination": "Aoyama dinner district",
+            "transport_mode": "train",
+            "duration_minutes": 30,
+            "route_notes": "Allow time to find platforms and buy tickets; times are estimates."
+          },
+          "cost": {
+            "category": "transport",
+            "amount": 220.0,
+            "currency": "JPY",
+            "label": "Nezu Museum garden → Aoyama dinner district"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "e3759dfd-63eb-4cb1-a26a-38e6e7f88a32",
+          "kind": "meal",
+          "title": "Aoyama dinner district",
+          "description": "An informal dinner in a local food district. No reservation or availability is implied.",
+          "start_time": "17:30",
+          "end_time": "19:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 90,
+          "place_name": "Aoyama dinner district",
+          "location": "Aoyama dinner district, Tokyo",
+          "travel": null,
+          "cost": {
+            "category": "food",
+            "amount": 2500.0,
+            "currency": "JPY",
+            "label": "Aoyama dinner district"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        }
+      ],
+      "additional_costs": [
+        {
+          "category": "accommodation",
+          "amount": 11000.0,
+          "currency": "JPY",
+          "label": "One night in a modest hotel, one traveler"
+        }
+      ],
+      "notes": [
+        "Hotel location is assumed central; adjust transfers when accommodation is known.",
+        "Breakfast is assumed included in accommodation."
+      ],
+      "estimated_total_cost": 17660.0
+    },
+    {
+      "day_number": 3,
+      "date": null,
+      "title": "On to Kyoto's vermilion paths",
+      "summary": "The intercity journey uses the morning, followed by a manageable afternoon around Fushimi Inari.",
+      "destinations": [
+        "Tokyo",
+        "Kyoto"
+      ],
+      "schedule": [
+        {
+          "id": "cb34c335-1fcb-4844-8524-c684c4501ac9",
+          "kind": "travel",
+          "title": "Tokyo → Kyoto",
+          "description": "Tokyo → Kyoto",
+          "start_time": "08:00",
+          "end_time": "10:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 150,
+          "place_name": null,
+          "location": null,
+          "travel": {
+            "origin": "Tokyo",
+            "destination": "Kyoto",
+            "transport_mode": "Shinkansen (estimated service window)",
+            "duration_minutes": 150,
+            "route_notes": "Allow time to find platforms and buy tickets; times are estimates."
+          },
+          "cost": {
+            "category": "transport",
+            "amount": 14500.0,
+            "currency": "JPY",
+            "label": "Tokyo → Kyoto"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "b2006f7d-6f7c-4f2d-b09b-7e050d16c696",
+          "kind": "rest",
+          "title": "Station arrival buffer",
+          "description": "Station arrival buffer",
+          "start_time": "10:30",
+          "end_time": "11:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 0.0,
+            "currency": "JPY",
+            "label": "Station arrival buffer"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "f71c84b4-d9db-43d7-ad41-4423b7d17e45",
+          "kind": "meal",
+          "title": "Kyoto Station lunch",
+          "description": "Kyoto Station lunch",
+          "start_time": "11:00",
+          "end_time": "12:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 60,
+          "place_name": "Kyoto Station",
+          "location": "Kyoto Station, Kyoto",
+          "travel": null,
+          "cost": {
+            "category": "food",
+            "amount": 1500.0,
+            "currency": "JPY",
+            "label": "Kyoto Station lunch"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "7910b9d1-aea4-48d4-9c1a-96254c7b2302",
+          "kind": "travel",
+          "title": "Kyoto Station → Fushimi Inari Taisha",
+          "description": "Kyoto Station → Fushimi Inari Taisha",
+          "start_time": "12:00",
+          "end_time": "12:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": {
+            "origin": "Kyoto Station",
+            "destination": "Fushimi Inari Taisha",
+            "transport_mode": "JR local train and walk",
+            "duration_minutes": 30,
+            "route_notes": "Allow time to find platforms and buy tickets; times are estimates."
+          },
+          "cost": {
+            "category": "transport",
+            "amount": 200.0,
+            "currency": "JPY",
+            "label": "Kyoto Station → Fushimi Inari Taisha"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "f4c960bd-77ec-43cd-a7ac-f0e2c609f40b",
+          "kind": "activity",
+          "title": "Fushimi Inari Taisha",
+          "description": "Walk the lower torii paths for photography and temple atmosphere. The full summit hike is optional; surfaces and steps may limit accessibility.",
+          "start_time": "12:30",
+          "end_time": "15:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 150,
+          "place_name": "Fushimi Inari Taisha",
+          "location": "Fushimi ward, Kyoto",
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 0.0,
+            "currency": "JPY",
+            "label": "Fushimi Inari Taisha"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "dd9c2198-d4ea-4c17-a3fe-8546a8110e43",
+          "kind": "rest",
+          "title": "Tea near the shrine",
+          "description": "Tea near the shrine",
+          "start_time": "15:00",
+          "end_time": "16:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 60,
+          "place_name": null,
+          "location": null,
+          "travel": null,
+          "cost": {
+            "category": "activities",
+            "amount": 600.0,
+            "currency": "JPY",
+            "label": "Tea near the shrine"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "c3ad06af-2a5d-4a4f-aa4e-877867fd5ec7",
+          "kind": "travel",
+          "title": "Fushimi Inari Taisha → Kyoto Station dinner",
+          "description": "Fushimi Inari Taisha → Kyoto Station dinner",
+          "start_time": "16:00",
+          "end_time": "16:30",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 30,
+          "place_name": null,
+          "location": null,
+          "travel": {
+            "origin": "Fushimi Inari Taisha",
+            "destination": "Kyoto Station dinner",
+            "transport_mode": "train",
+            "duration_minutes": 30,
+            "route_notes": "Allow time to find platforms and buy tickets; times are estimates."
+          },
+          "cost": {
+            "category": "transport",
+            "amount": 200.0,
+            "currency": "JPY",
+            "label": "Fushimi Inari Taisha → Kyoto Station dinner"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        },
+        {
+          "id": "c43b001e-3d54-48ea-9475-adc4b092f557",
+          "kind": "meal",
+          "title": "Kyoto Station dinner",
+          "description": "Kyoto Station dinner",
+          "start_time": "16:30",
+          "end_time": "18:00",
+          "start_timezone": "Asia/Tokyo",
+          "end_timezone": "Asia/Tokyo",
+          "start_day_offset": 0,
+          "end_day_offset": 0,
+          "duration_minutes": 90,
+          "place_name": "Kyoto Station dinner",
+          "location": "Kyoto Station, Kyoto",
+          "travel": null,
+          "cost": {
+            "category": "food",
+            "amount": 2500.0,
+            "currency": "JPY",
+            "label": "Kyoto Station dinner"
+          },
+          "notes": [
+            "Illustrative estimate; confirm current hours, fares, and accessibility."
+          ]
+        }
+      ],
+      "additional_costs": [
+        {
+          "category": "accommodation",
+          "amount": 11000.0,
+          "currency": "JPY",
+          "label": "Final night in Kyoto"
+        }
+      ],
+      "notes": [
+        "The final night is included; onward travel home is outside this estimate.",
+        "Do not treat the train window as a verified departure. Check timetables and reserve seats if needed."
+      ],
+      "estimated_total_cost": 30500.0
+    }
+  ],
+  "budget_summary": {
+    "scope": "Estimates for the entire group, including accommodation, meals, activities, local transport, and transfers between requested destinations. Travel from home and back is excluded unless explicitly requested.",
+    "category_totals": {
+      "accommodation": 33000.0,
+      "food": 12000.0,
+      "transport": 16220.0,
+      "activities": 4600.0,
+      "other": 0.0
+    },
+    "estimated_total": 65820.0,
+    "budget_limit": 75000.0,
+    "remaining": 9180.0,
+    "currency": "JPY",
+    "status": "within_budget",
+    "partial": false
+  },
+  "assumptions": [
+    "DEMO: illustrative offline data, not a live travel recommendation.",
+    "One traveler, balanced pace, central modest hotels, and no calendar dates.",
+    "Costs, availability, travel durations, and opening hours are estimates; check time-sensitive details before travel.",
+    "Numbered days have no calendar dates; timezone calculations use a representative date. Confirm seasonal clock changes before travel."
+  ],
+  "warnings": [
+    "Two cities in three days leaves limited time in Kyoto. Add a day if you prefer a slower visit."
+  ],
+  "generation": {
+    "provider": "offline fixture",
+    "model": null,
+    "generated_at": "2026-11-04T14:27:38.208456+00:00",
+    "usage": null,
+    "demo": true,
+    "roles": []
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "trip_name": "Japan · food, temples & quiet corners",
+  "destinations": [
+    "Tokyo, Japan",
+    "Kyoto, Japan"
+  ],
+  "duration_days": 3,
+  "budget": 75000.0,
+  "currency": "JPY",
+  "preferences": "Local food, temples, photography, quiet places. Include Fushimi Inari, prefer trains, avoid nightlife.",
+  "start_date": null,
+  "travelers": 1,
+  "pace": "balanced",
+  "destination_delegated": false
+}

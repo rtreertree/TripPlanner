@@ -1,0 +1,59 @@
+ILLUSTRATIVE CONVERSATION — no live API calls were used to author this example.
+Exact generated wording, activities and estimates will vary with the configured model.
+
+Trip name (optional): Japan · food, temples & quiet corners
+Days: three days
+Destinations: Tokyo first, then Kyoto
+Budget (optional): 75,000 Japanese yen for the whole trip
+Preferences / special requests (optional): I'm traveling alone. I love local food,
+  temples, photography and quiet places. Include Fushimi Inari, prefer trains and
+  skip nightlife. Keep a balanced pace.
+
+Assistant: I'll plan 3 days in Tokyo → Kyoto for 1 traveler, with 75,000 JPY for
+  the whole group, at a balanced pace. Using numbered days. Creating your itinerary…
+Assistant: Your plan is saved. Open the printed itinerary.html path in your browser.
+  Make changes here in the terminal, then refresh the page to see them.
+
+You: Why did you include a station buffer on Day 3?
+Assistant: It allows time to leave the platform, find your way around and settle
+  after the intercity transfer. Your plan is unchanged.
+
+You: Make Day 2 more relaxed.
+Assistant: I've shortened the afternoon visit and added a longer quiet break.
+  The updated estimate and revision are shown below. Refresh the browser page.
+
+You: Actually, add another traveler.
+Assistant: I'll update the group to two travelers and keep the 75,000 JPY group
+  budget. Accommodation and other group costs will be re-estimated.
+
+You: Undo my last change.
+Assistant: Restored the previous plan as a new saved revision.
+
+You: Exit
+Assistant: Your progress is saved. Run the app again to continue.
+
+[On the next run, choose the Plan from the saved-trip list by number or name.
+The app opens its page and enters chat without regenerating the itinerary.]
+
+EXAMPLE CLARIFICATION
+Budget (optional): 500 per person
+Preferences / special requests (optional): Quiet places and good food.
+Assistant: Which currency should I use for the 500-per-person budget?
+You: US dollars, and there are two of us.
+Assistant: I'll use a 1,000 USD budget for the whole group.
+
+EXAMPLE PENDING EDIT
+You: Add another city, but keep the same days and relaxed pace.
+Assistant: The transfer would remove most of the rest time. Would you prefer to
+  add a day or replace one current destination?
+You: Would another day help?
+Assistant: An extra day would give the transfer room without compressing the
+  sightseeing days. Your saved plan is unchanged; the edit is still pending.
+You: Cancel
+Assistant: Pending changes canceled. Your saved plan is unchanged.
+
+EXAMPLE RECOVERY
+Assistant: Could not connect to OpenAI. Your last saved work is preserved.
+  Type Retry or Exit, or Cancel to keep your saved plan.
+You: Retry
+[The application retries the saved operation; you do not re-enter the trip.]

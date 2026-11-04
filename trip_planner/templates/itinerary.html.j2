@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{{ plan.request.trip_name }} · Trip itinerary</title>
+  <style>{{ css }}</style>
+</head>
+<body>
+  <a class="skip-link" href="#itinerary">Skip to itinerary</a>
+  <div class="page-shell">
+    <header class="masthead">
+      <a class="wordmark" href="#top"><span class="brand-mark" aria-hidden="true">↗</span> THE TRIP PLANNER</a>
+      <span class="edition">YOUR PERSONAL FIELD GUIDE <span aria-hidden="true">/</span> REV. {{ plan.revision }}</span>
+    </header>
+    <main id="top">
+      <section class="hero" aria-labelledby="trip-title">
+        <div class="hero-copy">
+          <p class="eyebrow">A little planning. A world to discover.</p>
+          <h1 id="trip-title">{{ plan.request.trip_name }}</h1>
+          <p class="destination-line">{% for destination in plan.request.destinations %}{{ destination }}{% if not loop.last %}<span aria-hidden="true"> &nbsp;→&nbsp; </span><span class="sr-only"> then </span>{% endif %}{% endfor %}</p>
+          <p class="trip-summary">{{ plan.summary }}</p>
+          <div class="trip-facts" aria-label="Trip details">
+            <div><strong>{{ plan.request.duration_days }}</strong><span>days of discovery</span></div>
+            <div><strong>{{ plan.request.travelers }}</strong><span>{{ 'traveler' if plan.request.travelers == 1 else 'travelers' }}</span></div>
+            <div><strong class="pace">{{ plan.request.pace }}</strong><span>travel pace</span></div>
+          </div>
+        </div>
+        <div class="trip-stamp" aria-hidden="true">
+          <span class="stamp-top">THE NEXT CHAPTER</span>
+          <span class="stamp-arrow">↗</span>
+          <span class="stamp-days">{{ '%02d'|format(plan.request.duration_days) }} DAYS</span>
+          <span class="stamp-bottom">GO MAKE MEMORIES</span>
+        </div>
+      </section>
+      <div class="page-instruction"><span aria-hidden="true">↳</span> To change this plan, return to the terminal. Refresh this page after a change.</div>
+      {% if plan.generation.demo %}<p class="demo-notice"><strong>DEMO ITINERARY</strong> This example is illustrative; it was created without live travel data.</p>{% endif %}
+      {% if plan.warnings %}
+      <section class="warnings" aria-labelledby="warnings-title">
+        <h2 id="warnings-title">Before you go</h2>
+        <ul>{% for warning in plan.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+      </section>
+      {% endif %}
+      <div class="plan-layout">
+        <section class="itinerary" id="itinerary" aria-labelledby="itinerary-title">
+          <div class="section-heading"><div><p class="eyebrow">THE JOURNEY, DAY BY DAY</p><h2 id="itinerary-title">Your itinerary</h2></div><span class="section-counter">{{ '%02d'|format(plan.request.duration_days) }} DAYS</span></div>
+          <nav class="day-nav" aria-label="Jump to day">{% for day in plan.days %}<a href="#day-{{ day.day_number }}">Day {{ day.day_number }}</a>{% endfor %}</nav>
+          {% for day in plan.days %}
+          <article class="day-card" id="day-{{ day.day_number }}" aria-labelledby="day-title-{{ day.day_number }}">
+            <header class="day-header">
+              <div class="day-number"><span>DAY</span><strong>{{ '%02d'|format(day.day_number) }}</strong></div>
+              <div class="day-heading"><p class="eyebrow">{{ day.destinations|join(' / ') }}{% if day.date %} · {{ day.date.strftime('%d %b %Y') }}{% endif %}</p><h3 id="day-title-{{ day.day_number }}">{{ day.title }}</h3><p>{{ day.summary }}</p></div>
+            </header>
+            <ol class="timeline">
+              {% for item in day.schedule %}
+              <li class="timeline-item kind-{{ item.kind }}">
+                <div class="time-slot"><time>{{ item.start_time }}</time><span>— {{ item.end_time }}</span>{% if item.start_day_offset or item.end_day_offset %}<small>Day +{{ item.start_day_offset }} → +{{ item.end_day_offset }}</small>{% endif %}<small>{{ item.start_timezone }}{% if item.end_timezone != item.start_timezone %} → {{ item.end_timezone }}{% endif %}</small></div>
+                <div class="activity">
+                  <div class="activity-topline"><span class="kind-label">{{ item.kind|replace('_', ' ') }}</span><span class="item-cost">{{ item.cost.amount|money(item.cost.currency) }}{% if item.cost.amount == 0 %} · Free{% endif %}</span></div>
+                  <h4>{{ item.title }}</h4>
+                  {% if item.travel %}<p class="route"><span class="transport-badge">{{ item.travel.transport_mode }}</span> {{ item.travel.origin }} <span aria-label="to">→</span> {{ item.travel.destination }} <span class="duration">· {{ item.travel.duration_minutes }} min</span></p>{% endif %}
+                  {% if item.place_name or item.location %}<p class="place">{% if item.place_name %}{{ item.place_name }}{% endif %}{% if item.place_name and item.location %}<span aria-hidden="true"> · </span>{% endif %}{% if item.location %}{{ item.location }}{% endif %}</p>{% endif %}
+                  <p class="activity-description">{{ item.description }}</p>
+                  {% if item.travel and item.travel.route_notes %}<p class="route-note">{{ item.travel.route_notes }}</p>{% endif %}
+                  {% if item.notes %}<ul class="item-notes">{% for note in item.notes %}<li>{{ note }}</li>{% endfor %}</ul>{% endif %}
+                </div>
+              </li>
+              {% endfor %}
+            </ol>
+            <footer class="day-footer">
+              {% if day.additional_costs %}<div class="additional-costs"><span class="small-label">OTHER DAY COSTS</span>{% for cost in day.additional_costs %}<p>{{ cost.label or cost.category|capitalize }} <strong>{{ cost.amount|money(cost.currency) }}</strong></p>{% endfor %}</div>{% endif %}
+              {% if day.notes %}<ul class="day-notes">{% for note in day.notes %}<li>{{ note }}</li>{% endfor %}</ul>{% endif %}
+              <p class="day-total"><span>Estimated day total · group{% if day.schedule|selectattr('cost.amount', 'none')|list or day.additional_costs|selectattr('amount', 'none')|list %} · partial{% endif %}</span><strong>{{ day.estimated_total_cost|money(plan.request.currency) }}</strong></p>
+            </footer>
+          </article>
+          {% endfor %}
+        </section>
+        <aside class="trip-sidebar" aria-label="Budget and planning notes">
+          <section class="budget-card" aria-labelledby="budget-title">
+            <p class="eyebrow">THE NUMBERS</p><h2 id="budget-title">Room to explore.</h2>
+            <p class="small-label">{% if plan.budget_summary.partial %}PARTIAL {% endif %}ESTIMATED GROUP TOTAL</p>
+            <p class="budget-total">{{ plan.budget_summary.estimated_total|money(plan.budget_summary.currency) }}</p>
+            <p class="budget-caption">For {{ plan.request.travelers }} {{ 'traveler' if plan.request.travelers == 1 else 'travelers' }} across {{ plan.request.duration_days }} days.</p>
+            {% if plan.budget_summary.partial %}<p class="budget-status">Some costs are unknown. This total includes known estimates only; budget status is uncertain.</p>
+            {% elif plan.budget_summary.status == 'over_budget' %}<p class="budget-status over-budget">Over your budget by {{ (plan.budget_summary.estimated_total - plan.budget_summary.budget_limit)|money(plan.budget_summary.currency) }}.</p>
+            {% elif plan.budget_summary.budget_limit is not none %}<p class="budget-status">{{ plan.budget_summary.remaining|money(plan.budget_summary.currency) }} within your group budget.</p>
+            {% else %}<p class="budget-status">No spending limit set.</p>{% endif %}
+            {% if plan.budget_summary.budget_limit is not none %}
+            <div class="budget-track" aria-hidden="true"><span style="width: {{ budget_used }}%"></span></div>
+            <p class="budget-limit">Group budget <strong>{{ plan.budget_summary.budget_limit|money(plan.budget_summary.currency) }}</strong></p>
+            {% endif %}
+            <div class="category-breakdown" aria-label="Estimated costs by category">
+              {% for category in category_bars %}<div class="category-row"><div><span>{{ category.name|capitalize }}</span><strong>{{ category.amount|money(plan.budget_summary.currency) }}</strong></div><div class="category-track" aria-hidden="true"><span style="width: {{ category.width }}%"></span></div></div>{% endfor %}
+            </div>
+            <p class="budget-scope">{{ plan.budget_summary.scope }}</p>
+            <p class="estimate-note">All costs apply to the entire group. Prices, travel times and availability are estimates. Check current details before booking.</p>
+          </section>
+          {% if plan.assumptions %}<section class="notes-card" aria-labelledby="assumptions-title"><p class="eyebrow">A FEW USEFUL DETAILS</p><h2 id="assumptions-title">Planning notes</h2><ul>{% for assumption in plan.assumptions %}<li>{{ assumption }}</li>{% endfor %}</ul></section>{% endif %}
+          {% if plan.request.preferences %}<section class="preferences-card" aria-labelledby="preferences-title"><p class="eyebrow">MADE FOR YOU</p><h2 id="preferences-title">Your travel brief</h2><p>{{ plan.request.preferences }}</p></section>{% endif %}
+        </aside>
+      </div>
+    </main>
+    <footer class="page-footer"><div><strong>GOOD TRIPS START WITH A PLAN.</strong><p>Leave a little room for the unexpected.</p></div><div class="file-metadata"><p>Revision {{ plan.revision }} · Updated {{ plan.updated_at|timestamp }}</p><p>{{ 'Demo data' if plan.generation.demo else plan.generation.provider }}{% if plan.generation.model %} · {{ plan.generation.model }}{% endif %} · Estimates, not reservations</p><details><summary>Generation record</summary><p>Created {{ plan.created_at|timestamp }} · Generated {{ plan.generation.generated_at|timestamp }}</p>{% for role in plan.generation.roles %}<p>{{ role.role|capitalize }}: {{ role.provider }}{% if role.model %} / {{ role.model }}{% endif %} · {{ role.generated_at|timestamp }}{% if role.usage and role.usage.total_tokens is not none %} · {{ role.usage.total_tokens }} tokens{% endif %}</p>{% endfor %}</details></div></footer>
+  </div>
+</body>
+</html>
