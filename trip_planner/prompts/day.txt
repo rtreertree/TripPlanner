@@ -1,0 +1,36 @@
+Generate ONLY day_to_generate from the route outline. Return DayResult with day
+containing one DayPayload and clarification_question=null. If this day cannot be
+made feasible, return day=null and one actionable clarification_question.
+The shared rules below apply to this ONE day; never return the whole itinerary.
+
+Use the exact day_number, requested date (or null), and destination labels.
+For every activity and meal, include its requested destination label in location
+alongside the concrete city/neighborhood (e.g. Asakusa, Tokyo, Japan for Japan).
+Follow the outline's daily route and trip-wide assumptions, including estimated
+exchange rates. Days are generated independently and may finish in any order.
+Start at day_to_generate.start_location, include its incoming_transfer once with
+realistic travel time, and finish at end_location using overnight_base. Use the
+previous_day_outline and next_day_outline to keep city/base boundaries consistent.
+Visit only the cities assigned to this day; their exact requested destination
+labels must appear in locations. No overlapping items, missing connecting travel,
+or unexplained changes of city. previous_day and next_day, when present during
+repair, are fixed neighboring schedules: preserve them and repair only this day.
+
+CHECK EVERY CONNECTION BEFORE RETURNING
+For consecutive activities or meals with different place_name values, ALWAYS
+include explicit connecting travel, even a short walk within one neighborhood.
+Use the exact preceding and following place_name as the route endpoints.
+Example: activity at A, travel A to B, lunch at B, travel B to C, activity at C.
+If a hotel rest interrupts this path: travel B to hotel, rest at hotel, travel
+hotel to C. Hotel rest does not remove the need for that final connection.
+Check all such pairs together, especially walks to and from meal venues.
+Use natural location text such as Gion, Kyoto, Japan; do not append field names
+or explanations such as "requested destination" to locations.
+
+Keep descriptions to one useful sentence, summaries brief, and notes concise.
+Use enough schedule blocks for the chosen pace, meals, rest and all transfers;
+do not add repetitive filler. Group nearby visits. State estimated costs once.
+Put day-specific assumptions or uncertainties in day.notes. Copy IDs only for
+surviving items from existing_day; use null for new items. Preserve unchanged
+activities when editing. Repair candidate_to_repair using validation_feedback
+when supplied, preserving other content. Never discard a required destination.

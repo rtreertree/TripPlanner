@@ -6,7 +6,7 @@ from decimal import Decimal
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from .models import BudgetSummary, Day, GenerationMetadata, ItineraryPayload, RequestDraft, SavedPlan, TripRequest
+from .models import BudgetSummary, Day, DayOutline, DayPayload, GenerationMetadata, ItineraryPayload, RequestDraft, SavedPlan, TripRequest
 
 MAX_TRIP_DAYS = 21
 COST_CATEGORIES = ("accommodation", "food", "transport", "activities", "other")
@@ -73,6 +73,15 @@ def _matches(first: str, second: str) -> bool:
     return bool(left and right and (left == right or left in right or right in left))
 
 
+def _route_matches(first: str, second: str) -> bool:
+    # Placeholder labels can reorder identical words between independent days,
+    # e.g. "Assumed Kyoto hotel" and "Kyoto hotel (assumed)". Keep this narrow
+    # allowance on transfer endpoints; destination coverage keeps its own rules.
+    left = re.findall(r"\w+", first.casefold())
+    right = re.findall(r"\w+", second.casefold())
+    return _matches(first, second) or bool(left and sorted(left) == sorted(right))
+
+
 def _zone(value: str):
     if re.fullmatch(r"[+-]\d{2}:\d{2}", value):
         hours, minutes = map(int, value[1:].split(":"))
@@ -106,13 +115,43 @@ def _cost_amount(cost, currency: str) -> Decimal | None:
     return Decimal(str(cost.amount))
 
 
-def _check_days(payload: ItineraryPayload, request: TripRequest) -> None:
-    if len(payload.days) != request.duration_days:
+def _check_visit_connections(day: DayPayload) -> None:
+    """Report all disconnected visit pairs together so one repair can fix them."""
+    previous = None
+    transfers = []
+    errors = []
+    for item in day.schedule:
+        if item.kind == "travel" and item.travel:
+            transfers.append(item.travel)
+        if item.kind not in {"activity", "meal"}:
+            continue
+        if previous and not _matches(previous.place_name or "", item.place_name or ""):
+            if not transfers:
+                errors.append(f"Add a transfer between {previous.place_name} and {item.place_name}.")
+            else:
+                if not any(_matches(transfers[0].origin, value or "") for value in (previous.place_name, previous.location)):
+                    errors.append(f"A transfer origin must connect to the preceding visit: {previous.place_name} "
+                                  f"({previous.location}), but the route starts at {transfers[0].origin}.")
+                if not any(_matches(transfers[-1].destination, value or "") for value in (item.place_name, item.location)):
+                    errors.append(f"A transfer destination must connect to the following visit: the route ends at "
+                                  f"{transfers[-1].destination}, but the next visit is {item.place_name} ({item.location}). "
+                                  "Add the missing connecting transfer, including walks after hotel rest stops.")
+        previous, transfers = item, []
+    if errors:
+        raise ValueError(" ".join(errors))
+
+
+def _check_days(payload: ItineraryPayload, request: TripRequest, *, complete: bool = True, isolated: bool = False) -> None:
+    if complete and len(payload.days) != request.duration_days:
         raise ValueError(f"The itinerary must contain exactly {request.duration_days} days.")
-    if [day.day_number for day in payload.days] != list(range(1, request.duration_days + 1)):
+    if len(payload.days) > request.duration_days:
+        raise ValueError("The itinerary contains too many days.")
+    if isolated and any(not 1 <= day.day_number <= request.duration_days for day in payload.days):
+        raise ValueError("The day number must fall within the requested trip.")
+    if not isolated and [day.day_number for day in payload.days] != list(range(1, len(payload.days) + 1)):
         raise ValueError("Itinerary days must be numbered consecutively from 1.")
     covered = [place for day in payload.days for place in day.destinations]
-    if not request.destination_delegated:
+    if complete and not request.destination_delegated:
         missing = [place for place in request.destinations if not any(_matches(place, included) for included in covered)]
         if missing:
             raise ValueError(f"The itinerary is missing requested destinations: {', '.join(missing)}. Explain feasibility or include them.")
@@ -127,9 +166,8 @@ def _check_days(payload: ItineraryPayload, request: TripRequest) -> None:
             raise ValueError("Day dates must match the requested start date, or remain null for an undated trip.")
         if not day.title.strip() or not day.summary.strip() or not day.destinations or not day.schedule:
             raise ValueError(f"Day {day.day_number} needs a title, summary, destinations, and a usable schedule.")
+        _check_visit_connections(day)
         base = expected_date or date(2026, 1, 5) + timedelta(days=day.day_number - 1)
-        prior_visit = None
-        transfers = []
         for item in day.schedule:
             if not item.title.strip() or item.duration_minutes <= 0:
                 raise ValueError("Every schedule item needs a title and a positive duration.")
@@ -147,7 +185,6 @@ def _check_days(payload: ItineraryPayload, request: TripRequest) -> None:
                     raise ValueError("Allow enough scheduled time for the estimated transfer duration.")
                 if not all(value.strip() for value in (item.travel.origin, item.travel.destination, item.travel.transport_mode)):
                     raise ValueError("Transfers need an origin, destination, and transport method.")
-                transfers.append(item.travel)
                 routes_since_visit.append(item.travel)
             elif item.travel is not None:
                 raise ValueError("Travel details belong on travel schedule items.")
@@ -168,17 +205,11 @@ def _check_days(payload: ItineraryPayload, request: TripRequest) -> None:
                             raise ValueError("A change of destination needs a connecting intercity transfer.")
                     previous_city = city
                 for earlier, later in zip(routes_since_visit, routes_since_visit[1:]):
-                    if not _matches(earlier.destination, later.origin):
-                        raise ValueError("Consecutive transfer segments must connect to each other.")
+                    if not _route_matches(earlier.destination, later.origin):
+                        raise ValueError(f"Consecutive transfer segments must connect to each other: the earlier route "
+                                         f"ends at {earlier.destination}, but the next starts at {later.origin}. "
+                                         "Use the same endpoint label for the same place, or add connecting travel.")
                 routes_since_visit = []
-                if prior_visit and not _matches(prior_visit.place_name, item.place_name):
-                    if not transfers:
-                        raise ValueError(f"Add a transfer between {prior_visit.place_name} and {item.place_name}.")
-                    if not any(_matches(transfers[0].origin, value) for value in (prior_visit.place_name, prior_visit.location)):
-                        raise ValueError("A transfer origin must connect to the preceding visit.")
-                    if not any(_matches(transfers[-1].destination, value) for value in (item.place_name, item.location)):
-                        raise ValueError("A transfer destination must connect to the following visit.")
-                prior_visit, transfers = item, []
         kinds = {item.kind for item in day.schedule}
         if "meal" not in kinds or not kinds.intersection({"rest", "free_time"}):
             raise ValueError(f"Day {day.day_number} must include meals and time for rest or free time.")
@@ -188,10 +219,82 @@ def _check_days(payload: ItineraryPayload, request: TripRequest) -> None:
                        and any(_matches(route.destination, place) for place in day.destinations) for route in routes):
                 raise ValueError("A change of destination needs an explicit intercity transfer with scheduled travel time.")
         previous_day = day
-    if not request.destination_delegated and visited_destinations != request.destinations:
+    expected = request.destinations if complete else request.destinations[:len(visited_destinations)]
+    if not isolated and not request.destination_delegated and visited_destinations != expected:
         if set(visited_destinations) == set(request.destinations):
             raise ValueError("Visit requested destinations in their original order unless the user asks to optimize it.")
-        raise ValueError("Each requested destination needs an actual visit with a meaningful location in its schedule.")
+        missing = [place for place in expected if place not in visited_destinations]
+        raise ValueError(
+            "Each requested destination needs an actual visit with a meaningful location in its schedule. "
+            f"Missing visit labels: {', '.join(missing)}. "
+            "Include the exact requested destination label in an activity or meal location alongside "
+            "its concrete city/neighborhood (for example, Asakusa, Tokyo, Japan for a Japan trip)."
+        )
+
+
+def validate_day_prefix(days, request: TripRequest) -> None:
+    """Check a completed prefix, including transfers across its day boundaries."""
+    _check_days(ItineraryPayload(summary="In progress", days=days, assumptions=[], warnings=[]),
+                request, complete=len(days) == request.duration_days)
+    ids = [item.id for day in days for item in day.schedule if item.id is not None]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Schedule item IDs must be unique.")
+    for day in days:
+        for cost in [item.cost for item in day.schedule] + day.additional_costs:
+            _cost_amount(cost, request.currency)
+
+
+def validate_day_outline(day: DayPayload, outline: DayOutline) -> None:
+    """Keep independent schedules tied to their agreed route and incoming transfer."""
+    if day.day_number != outline.day_number:
+        raise ValueError(f"Return Day {outline.day_number}, not another day.")
+    visits = [item for item in day.schedule if item.kind in {"activity", "meal"}]
+    if not any(_matches(outline.end_location, item.location or "") for item in visits):
+        raise ValueError(f"Day {day.day_number} needs an actual visit in its outline end_location: {outline.end_location}.")
+    transfer = outline.incoming_transfer
+    if transfer:
+        if not _has_transfer_route(day, transfer.origin, transfer.destination, transfer.duration_minutes):
+            raise ValueError(f"Day {day.day_number} needs its outline's incoming transfer from {transfer.origin} "
+                             f"to {transfer.destination}, allowing at least {transfer.duration_minutes} minutes of travel. "
+                             "A connected sequence of airport/station transfers and the main journey is allowed; "
+                             "each leg must connect to the next. Waiting and rest do not count as travel time.")
+
+
+def _has_transfer_route(day: DayPayload, origin: str, destination: str, minimum_minutes: int) -> bool:
+    """Match a city-to-city journey that may use several timed transport legs."""
+    endpoint = None
+    travel_minutes = 0
+    for item in day.schedule:
+        leg = item.travel if item.kind == "travel" else None
+        if leg is None:
+            if endpoint and item.kind in {"activity", "meal"} and not any(
+                _route_matches(endpoint, value) for value in (item.place_name, item.location) if value
+            ):
+                endpoint, travel_minutes = None, 0
+            continue
+        if endpoint and _route_matches(endpoint, leg.origin):
+            travel_minutes += leg.duration_minutes
+        elif _matches(origin, leg.origin):
+            travel_minutes = leg.duration_minutes
+        else:
+            endpoint, travel_minutes = None, 0
+            continue
+        endpoint = leg.destination
+        if _matches(destination, endpoint) and travel_minutes >= minimum_minutes:
+            return True
+    return False
+
+
+def validate_independent_day(day: DayPayload, request: TripRequest, outline: DayOutline) -> None:
+    """Check local rules without requiring other workers' schedules to exist."""
+    validate_day_outline(day, outline)
+    _check_days(ItineraryPayload(summary="In progress", days=[day], assumptions=[], warnings=[]),
+                request, complete=False, isolated=True)
+    ids = [item.id for item in day.schedule if item.id is not None]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Schedule item IDs must be unique.")
+    for cost in [item.cost for item in day.schedule] + day.additional_costs:
+        _cost_amount(cost, request.currency)
 
 
 def build_plan(payload: ItineraryPayload, request: TripRequest, trip_id: str,

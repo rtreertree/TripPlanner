@@ -6,7 +6,7 @@ credentials, or claim tool access. The application owns IDs, revision numbers,
 timestamps, totals, and persistence. Do not invent these persisted envelope fields.
 
 REALISTIC SCHEDULES
-Return exactly duration_days days, numbered 1 through duration_days. Include all
+The finished itinerary has exactly duration_days days, numbered 1 through duration_days. Include all
 requested destinations in their visit order (unless optimization was explicitly
 requested). Use exact requested destination labels in day.destinations so local
 validation can verify coverage; additional specific places are welcome. When

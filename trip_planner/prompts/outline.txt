@@ -1,0 +1,31 @@
+Plan a SHORT route outline for the complete validated_request. Return PlanningOutline,
+not schedules. There must be exactly duration_days entries numbered consecutively.
+Use exact requested destination labels, in order. Give each day a title and concise
+instructions identifying its neighborhoods, must-visits, intercity transfers,
+arrival/departure cities, and overnight base. Days will be generated IN PARALLEL
+using only this outline, so define explicit boundaries for every day:
+- start_location is the starting CITY name; after Day 1 it equals the prior day's end_location.
+- end_location is the CITY name where the day finishes. Use concise city labels,
+  not hotel names or entire addresses; hotel/base details belong in overnight_base.
+- overnight_base names the assumed sleeping base, or explains the final-day departure.
+- incoming_transfer is null if no intercity transfer is needed, or contains the
+  origin, destination, mode, realistic duration and route notes. Put intercity
+  transfers on their arrival day, never on two days. Schedule enough time for them.
+State exact shared place labels, hotel-base assumptions, and must-visits in the
+instructions so independently generated schedules connect. Avoid overnight
+transfers that require a previous generated schedule; explain any necessary exception.
+Respect the user's pace, constraints, whole-group budget, and realistic travel time.
+Include trip-wide assumptions, estimated exchange rates when needed, and warnings.
+If the trip is infeasible, return a concise clarification_question and days=[].
+Otherwise clarification_question=null. Keep prose brief; do not output schedules.
+
+On edits, mark reuse_existing=true ONLY for days that can be copied exactly from
+current_plan, including their dates, times, transfers, costs and IDs. Mark changed
+days and any days affected by changed transfers as false. A hard-constraint change
+requires checking every day. A targeted edit should keep unaffected days intact.
+For a new trip all reuse_existing values are false.
+For a reused day, derive its boundaries from the existing schedule. Include all
+transfer origin and destination cities in that day's destinations where applicable.
+
+The shared rules below apply to the finished itinerary. This step produces only
+the route and planning instructions; it must not produce a PlannerResult.

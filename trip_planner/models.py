@@ -118,10 +118,37 @@ class PlannerResult(Model):
     assistant_message: str
 
 
+class DayOutline(Model):
+    day_number: int
+    title: str
+    destinations: list[str]
+    instructions: str
+    reuse_existing: bool
+    start_location: str
+    end_location: str
+    overnight_base: str
+    incoming_transfer: Travel | None
+
+
+class PlanningOutline(Model):
+    summary: str
+    days: list[DayOutline]
+    assumptions: list[str]
+    warnings: list[str]
+    clarification_question: str | None
+    assistant_message: str
+
+
+class DayResult(Model):
+    day: DayPayload | None
+    clarification_question: str | None
+
+
 class TokenUsage(Model):
     input_tokens: int | None = None
     output_tokens: int | None = None
     total_tokens: int | None = None
+    reasoning_tokens: int | None = None
 
 
 class RoleGeneration(Model):
@@ -130,6 +157,7 @@ class RoleGeneration(Model):
     model: str | None
     generated_at: str
     usage: TokenUsage | None = None
+    reasoning_effort: str | None = None
 
 
 class GenerationMetadata(Model):

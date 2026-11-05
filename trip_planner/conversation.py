@@ -188,7 +188,7 @@ class Application:
         self.say("Understanding your trip…" if not self.plan else "Understanding your message…")
         result = self.interpreter.interpret(answers=self.session.answers, draft=self.session.draft,
                     message=self.session.pending.get("message", ""), history=self.session.history[-12:],
-                    plan=self.plan, pending=self.session.pending or None)
+                    plan=self.plan, pending=self.session.pending or None, progress=self.say)
         metadata = getattr(self.interpreter, "last_metadata", None)
         if metadata:
             self.session.interpretation_metadata.append(metadata.model_dump(mode="json"))
@@ -239,6 +239,7 @@ class Application:
         self.session.draft = RequestDraft.model_validate({**request.model_dump(), "budget_per_person": False,
                                                           "travelers_explicit": self.session.draft.travelers_explicit})
         self.session.pending["request"] = request.model_dump(mode="json")
+        self.session.pending.pop("generation", None)
         self.session.pending["base_revision"] = self.plan.revision if self.plan else 0
         self.session.clarification = None
         self.session.stage = "generate"
@@ -251,30 +252,28 @@ class Application:
         self.say(f"I'll plan {request.duration_days} days in {' → '.join(request.destinations)} for {request.travelers} traveler(s), {budget_text}, at a {request.pace} pace. "
                  + (f"Starting {request.start_date}. " if request.start_date else "Using numbered days. ")
                  + "Creating your itinerary…")
-        feedback = ""
-        for attempt in range(2):
-            result = self.planner.plan(request, current=self.plan,
-                                      instructions=self.session.pending.get("instructions", ""), feedback=feedback)
-            if result.clarification_question or result.itinerary is None:
-                self.session.clarification = result.clarification_question or result.assistant_message or "Would you prefer more days or fewer destinations?"
-                self.session.stage = "clarify"
-                self.persist()
-                return
-            roles = [RoleGeneration.model_validate(value) for value in self.session.interpretation_metadata]
-            metadata = getattr(self.planner, "last_metadata", None)
-            if metadata:
-                roles.append(metadata)
-            generation = GenerationMetadata(provider="openai", model=metadata.model if metadata else None,
-                                            generated_at=metadata.generated_at if metadata else "", roles=roles)
-            try:
-                payload = result.itinerary.model_copy(deep=True)
-                payload.assumptions = list(dict.fromkeys(payload.assumptions + self.session.pending.get("assumptions", [])))
-                candidate = build_plan(payload, request, self.session.trip_id, previous=self.plan, generation=generation)
-                break
-            except ValueError as exc:
-                if attempt:
-                    raise ValueError(f"The itinerary still failed validation: {exc}") from exc
-                feedback = str(exc)
+        def save_checkpoint(state):
+            self.session.pending["generation"] = state
+            self.persist()
+
+        result = self.planner.plan(request, current=self.plan,
+                                  instructions=self.session.pending.get("instructions", ""),
+                                  checkpoint=self.session.pending.get("generation"),
+                                  save_checkpoint=save_checkpoint, progress=self.say)
+        if result.clarification_question or result.itinerary is None:
+            self.session.clarification = result.clarification_question or result.assistant_message or "Would you prefer more days or fewer destinations?"
+            self.session.stage = "clarify"
+            self.persist()
+            return
+        roles = [RoleGeneration.model_validate(value) for value in self.session.interpretation_metadata]
+        metadata = getattr(self.planner, "last_metadata", None)
+        if metadata:
+            roles.append(metadata)
+        generation = GenerationMetadata(provider="openai", model=metadata.model if metadata else None,
+                                        generated_at=metadata.generated_at if metadata else "", roles=roles)
+        payload = result.itinerary.model_copy(deep=True)
+        payload.assumptions = list(dict.fromkeys(payload.assumptions + self.session.pending.get("assumptions", [])))
+        candidate = build_plan(payload, request, self.session.trip_id, previous=self.plan, generation=generation)
         self.commit(candidate)
         self.say(result.assistant_message or "The itinerary has been updated.")
 

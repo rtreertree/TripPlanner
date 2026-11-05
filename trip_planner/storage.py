@@ -115,6 +115,10 @@ class Store:
         for folder in self.root.iterdir():
             if not folder.is_dir() or folder.is_symlink():
                 continue
+            # Output may also contain reports or benchmark containers. A saved
+            # trip has its own session or committed plan at the folder root.
+            if not any((folder / name).exists() for name in ("session.json", "plan.json")):
+                continue
             try:
                 session = self.load_session(folder.name)
                 plan_path = folder / "plan.json"

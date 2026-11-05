@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from .config import Config
 from .models import InterpreterResult, RequestDraft, SavedPlan
 from .openai_service import OpenAIService
+from .planner import plan_context
 
 
 class Interpreter:
@@ -24,6 +25,7 @@ class Interpreter:
         history: list | None = None,
         plan: SavedPlan | None = None,
         pending: dict | None = None,
+        progress=None,
     ) -> InterpreterResult:
         self.last_metadata = None
         self.config.validate_live("interpreter")
@@ -35,9 +37,12 @@ class Interpreter:
             "request_draft": draft.model_dump(mode="json"),
             "message": message,
             "recent_conversation": (history or [])[-12:],
-            "active_plan": plan.model_dump(mode="json") if plan else None,
-            "pending_edit": pending,
+            "active_plan": {**plan_context(plan), "budget_summary": plan.budget_summary.model_dump(mode="json")} if plan else None,
+            # Checkpoints are local recovery state, not interpretation context.
+            "pending_edit": {key: value for key, value in (pending or {}).items()
+                             if key in {"instructions", "assumptions", "message", "request"}} or None,
         }
-        result = self.service.parse(role="interpreter", prompt=prompt, data=data, response_model=InterpreterResult)
+        result = self.service.parse(role="interpreter", prompt=prompt, data=data,
+                                    response_model=InterpreterResult, progress=progress)
         self.last_metadata = self.service.last_metadata
         return result

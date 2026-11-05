@@ -28,7 +28,7 @@ trip_planner/
   static/                # packaged CSS
 ```
 
-Python 3.11+ and the runtime dependencies declared in `pyproject.toml` are required: `openai`, `pydantic`, `Jinja2` and `python-dotenv`. Installing the package includes all prompts, templates and styles; separate example or schema files are unnecessary at runtime. The `trip-planner` command is equivalent to `python -m trip_planner` after installation.
+Python 3.11+ and the runtime dependencies declared in `pyproject.toml` are required: `openai`, `httpx`, `pydantic`, `Jinja2` and `python-dotenv`. Installing the package includes all prompts, templates and styles; separate example or schema files are unnecessary at runtime. The `trip-planner` command is equivalent to `python -m trip_planner` after installation.
 
 ## Configuration
 
@@ -40,6 +40,13 @@ Configuration is loaded explicitly from the current directory's `.env`, then ove
 | `OPENAI_MODEL` | Shared model; no hardcoded default. Choose an available model supporting Responses Structured Outputs. |
 | `OPENAI_EXTRACTOR_MODEL` | Optional interpreter override, otherwise `OPENAI_MODEL`. |
 | `OPENAI_PLANNER_MODEL` | Optional planner override, otherwise `OPENAI_MODEL`. |
+| `OPENAI_TIMEOUT_SECONDS` | Maximum network inactivity while reading a response; default `90`. Must be finite and positive. Connect timeout is at most 10 seconds. |
+| `OPENAI_MAX_RETRIES` | SDK retries before a stream opens; default `0`, allowed range `0`–`3`. No automatic replay of a broken stream. |
+| `OPENAI_REQUEST_DEADLINE_SECONDS` | Active-step elapsed-time limit; default `300`. Checked between stream events; a blocked read can add up to the read timeout, and SDK connection retries run before event checks. |
+| `OPENAI_EXTRACTOR_MAX_OUTPUT_TOKENS` | Output token limit for interpretation; default `2000`. |
+| `OPENAI_PLANNER_MAX_OUTPUT_TOKENS` | Output token limit for each outline/day response; default `6000`. Increase if the app reports an output-limit failure. |
+| `OPENAI_REASONING_EFFORT` | Reasoning effort for both roles; default `low`. Supported values depend on the model. Use `default` or an empty value to omit the API setting; `none` explicitly requests no reasoning. |
+| `TRIP_PLANNER_WORKERS` | Concurrent day jobs after the outline; default `3`, allowed range `1`–`4`. Set to `1` to generate sequentially. Local repairs use the same worker limit; cross-day repairs run after generation. |
 | `TRIP_PLANNER_TIMEZONE` | IANA timezone used to resolve phrases such as “next Friday”; default `UTC`. |
 | `TRIP_PLANNER_OUTPUT_DIR` | Saved-trip folder; default `output`. `--output-dir` overrides it. |
 
@@ -119,7 +126,7 @@ Live interpretation and planning send relevant trip data to OpenAI, including th
 
 ## Architecture
 
-This application keeps interaction in the terminal and renders a standalone browser document. Python owns collection state, validation, persistence and action dispatch. Two separately prompted AI responsibilities interpret language and produce itinerary candidates. The implementation is synchronous because each step depends on the previous one.
+This application keeps interaction in the terminal and renders a standalone browser document. Python owns collection state, validation, persistence and action dispatch. Two separately prompted AI responsibilities interpret language and produce itinerary candidates. The terminal flow is synchronous, while a bounded thread pool generates independent days concurrently after a shared outline. Only the main thread updates session state, writes files, and delivers progress messages.
 
 ## Execution path
 
@@ -133,8 +140,8 @@ The normal flow is:
 2. Collect all five labeled answers, saving after each accepted answer or skip.
 3. Send the collected answers and draft to the interpreter.
 4. Merge extracted fields and corrections, clarify material unknowns, then call `normalize_request()`.
-5. Send the complete normalized request and any edit instructions to the planner.
-6. Validate its typed candidate and compute authoritative totals in `build_plan()`.
+5. Send the normalized request and edit instructions to the planner. Generate a route outline with explicit start/end cities, overnight bases and incoming transfers. Generate independent days concurrently, checkpointing every completed response. Each job validates local times, costs, route connections and outline transfers, with one repair if needed. Then validate schedules in day order, including overnight overlaps and destination coverage. On edits with unchanged constraints, copy unaffected days when possible.
+6. Validate the assembled candidate and compute authoritative totals in `build_plan()`.
 7. Commit JSON, save session state, render HTML, and enter chat.
 
 A follow-up answer returns through the interpreter. A question returns an answer without generation. Local actions dispatch through a fixed allowlist and do not execute model-generated commands, code or file paths.
@@ -149,6 +156,8 @@ All contracts reject unexpected fields. `trip_planner/models.py` is the source o
 | `InterpreterResult` | Intent, draft, explicit request updates, itinerary instructions, trip reference, missing fields, clarification, assumptions and conversational reply. Nullable field clearing is explicit. |
 | `TripRequest` | Complete normalized trip constraints accepted by Python before planning. |
 | `PlannerResult` | A typed `ItineraryPayload`, or an actionable feasibility/clarification question. |
+| `PlanningOutline` / `DayOutline` | Short route, day instructions, start/end cities, overnight bases, incoming transfers, reuse decisions, assumptions and warnings; no full schedules. |
+| `DayResult` | One `DayPayload`, or an actionable clarification question. |
 | `ItineraryPayload` / `DayPayload` | Planner-owned descriptions, schedules, itemized costs, assumptions and warnings; no trusted arithmetic or persisted envelope. |
 | `SavedPlan` | Application-owned schema version, trip identity, revision, UTC timestamps, request, validated days, computed budget summary and generation metadata. |
 
@@ -192,14 +201,14 @@ All monetary sums use `Decimal(str(amount))`. JSON models carry numeric values a
 | `generate` | Plan from the normalized pending request, then validate and commit. |
 | `chat` | Accept a question, edit or local action for the committed plan. |
 
-Pending data contains the message/instructions, validated request when ready, assumptions, and the base plan revision. This lets explicit Retry repeat the failed operation without retyping. A restart does not silently repeat an interrupted paid call. A committed plan newer than a pending operation's base revision supersedes that stale operation.
+Pending data contains the message/instructions, validated request when ready, assumptions, and the base plan revision. During generation, `pending.generation` holds the outline, validated day prefix in `days`, generated but not yet fully validated responses in `ready_days`, aggregate call metadata, and any invalid day's candidate/feedback. Out-of-order responses are cached under their requested day number. Explicit Retry requests only missing responses, then validates the assembled prefix and repairs an invalid day when needed. On a failed call, no new jobs are started; in-flight jobs finish and their successful responses are saved. Checkpoints are bound to the request, base plan content, instructions, model, prompts and checkpoint protocol; changed inputs invalidate them. Changing transport settings, output limits, reasoning effort, or worker count preserves usable responses. The parallel outline schema supersedes checkpoints from the earlier sequential protocol. A restart does not silently repeat an interrupted paid call. A committed plan newer than a pending operation's base revision supersedes that stale operation.
 
 Questions during clarification preserve the pending edit. Cancel returns to the saved plan's constraints. Undo loads the previous committed revision and validates/saves its itinerary as a new revision, retaining the trip identity. Switching or creating a trip saves the current session first.
 
 Failures have separate recovery boundaries:
 
 - Interpretation or planning failures preserve accepted answers, pending instructions and the current plan.
-- A locally invalid itinerary permits one planner repair call with validation feedback, then requires user action.
+- A locally invalid outline or independently generated day permits one repair call per attempt with validation feedback. Local day repairs run within the same worker limit. Ordered validation can separately repair a cross-day boundary or an invalid cached/reused day; failures then require user action. Day repairs include the candidate and preserve other responses. A timeout during repair keeps the candidate, with feedback recomputed from current validation on Retry. Connection feedback reports all missing visit-to-visit links in that day together.
 - A save failure retries persistence of the already validated candidate without another planner call. Exit reports that the latest work is unsaved.
 - A render failure after commit leaves recoverable JSON. A render retry rebuilds the same HTML path without calling AI.
 - A browser-open failure leaves the path available and the terminal session usable.
@@ -217,13 +226,19 @@ Revisions start at 1. A trip ID and creation timestamp persist across successful
 
 ## OpenAI boundary
 
-`Interpreter.interpret()` receives all labeled raw answers, a partial draft, the current message, the active plan where relevant, pending instructions and at most 12 recent conversation messages. It also receives the configured local date/timezone. Initial collection itself makes no API requests.
+`Interpreter.interpret()` receives all labeled raw answers, a partial draft, the current message, the active plan's request/itinerary/budget summary where relevant, pending instructions and at most 12 recent conversation messages. It also receives the configured local date/timezone. Generation checkpoints and storage metadata are excluded from this input. Initial collection itself makes no API requests.
 
-`Planner.plan()` receives a complete `TripRequest`, the current plan for edits, normalized change instructions and optional validation feedback. Initial planning and revision use distinct prompt files plus shared planning rules. It never needs to extract facts from the original raw answer labels.
+`Planner.plan()` receives a complete `TripRequest`, the current plan for edits, normalized change instructions, and an optional checkpoint/save callback. `outline.txt` creates the route and boundaries; `day.txt` creates individual schedules. Both use `planning_rules.txt`. Each day request receives the outline, adjacent day outlines, the corresponding old day for edits, and available fixed neighboring schedules for repair, rather than the whole saved plan. It does not need another worker's response to begin. It never extracts facts from raw questionnaire answers. Reuse is disabled when normalized constraints change; reused days are still locally validated against the completed prefix and outline. The final result remains a complete candidate, committed as one revision.
 
-`OpenAIService.parse()` uses the official SDK's synchronous `responses.parse(..., text_format=PydanticModel, store=False)`. It checks refusals, completion status and the presence of a valid parsed result. Authentication, access, missing model, quota/rate limit, timeout, connectivity, bad request and invalid output failures become useful terminal messages; provider error bodies and environment contents are not displayed.
+The worker pool has at most `TRIP_PLANNER_WORKERS` requests in flight, without queuing the rest of the trip at once. Workers send every typed response, per-call metadata and progress through a queue, even when a response needs repair. The main thread persists results and starts subsequent jobs. Each worker validates its day independently and performs at most one local repair before completion; both generation and repair share the same concurrency limit. Final ordered checks handle rules involving other days, with bounded serial repair of an affected day. The shared SDK client is initialized under a lock, and `last_metadata` is thread-local so usage/model records cannot be mixed between concurrent calls. Usage records include reasoning tokens when the API provides them.
 
-Client timeout defaults to 90 seconds and SDK transient retries to one. The application does not add another automatic network retry loop. A domain-invalid candidate may cause one explicit repair call; user-selected Retry is a separate decision. Separate model settings select interpretation and planning without hardcoding a model that may become unavailable.
+An outline's incoming journey can span several connected travel blocks, such as hotel → airport → destination airport → hotel. Validation follows matching endpoints and sums estimated travel durations; waiting, rest and schedule buffers do not satisfy the minimum travel time. Disconnected legs remain invalid. Saved-trip discovery considers only folders with a root `session.json` or `plan.json`, so report and benchmark containers are ignored while corrupt real trips still produce warnings.
+
+`OpenAIService.parse()` uses the official SDK's synchronous `responses.stream(..., text_format=PydanticModel, store=False)`. It consumes events and returns only a completed parsed result. Receiving events prevents a healthy long generation from hitting the read-inactivity timeout. Progress updates appear at step boundaries and about every 15 seconds while events arrive. Refusals, incomplete responses, output limits, early stream termination, midstream transport errors, authentication, access, missing model, quota/rate limits and invalid structured output become useful terminal messages; provider error bodies and environment contents are not displayed.
+
+Read inactivity defaults to 90 seconds and SDK transient retries to zero. The elapsed-time guard defaults to 300 seconds per step and is checked between events, so a blocked read or initial SDK retries can extend it. Outline and day outputs have explicit token limits. The application does not add another automatic network retry loop. A domain-invalid outline/day may cause one repair call; user-selected Retry is a separate decision. Planner metadata aggregates usage across checkpointed calls, including calls made before a restart. Separate model settings select interpretation and planning without hardcoding a model that may become unavailable.
+
+The design follows OpenAI's guidance on [reducing generated tokens and chunking work](https://developers.openai.com/api/docs/guides/latency-optimization) and [streaming structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs). Day-by-day generation bounds each response and avoids repeating successful work; it adds request overhead, so total time for a new trip still depends on the model, network and itinerary length. Streaming improves responsiveness and read-timeout behavior; it does not increase model generation speed.
 
 ## Rendering and security
 
@@ -248,6 +263,8 @@ python -m trip_planner render --plan output/TRIP_ID/plan.json --no-open
 Use the trip folder printed by the demo for `TRIP_ID`. The demo validates an itinerary, persists JSON and session state, and renders a standalone page. The render command rebuilds that page from committed JSON. These commands do not verify live API access or real travel accuracy.
 
 The original 144-test offline suite and pinned development environment are preserved on `secondary`. In a separate checkout of that branch, install `requirements-dev.lock`, then install the package with `python -m pip install -e . --no-deps` and run `python -m pytest -q`. The suite uses deterministic interpreter/planner substitutes and mocked SDK responses, covering collection, clarification, revisions, undo, persistence, recovery, schedule/cost validation and escaped HTML. Original schema/example consistency checks apply to that branch's retained files.
+
+The current timeout/recovery regressions run without network access using `python -m unittest discover -s tests -v` (or `python -m pytest -q` when pytest is installed). They cover resumed generation, day repair, reuse on edits, checkpoint invalidation, configuration loading, atomic final commit and the real SDK parser over mocked HTTP streams, including read timeouts and incomplete output. Parallel tests use barriers and events to prove overlapping calls, enforce the worker limit, preserve out-of-order responses after failure, stop new submissions on failure, keep persistence on the main thread, check intercity transfers for broad country requests, and verify thread-local metadata and reasoning options.
 
 For a source change on `main`, validate the affected behavior and verify installation with bundled prompts, the template and CSS from outside the repository. Update Pydantic models when contracts change; schema files can be regenerated from those models. Keep runtime assets inside the package.
 
