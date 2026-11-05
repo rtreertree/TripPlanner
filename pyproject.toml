@@ -14,9 +14,6 @@ dependencies = [
   "python-dotenv>=1.0,<2",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest>=8,<10", "build>=1.2,<2"]
-
 [project.scripts]
 trip-planner = "trip_planner.cli:main"
 
@@ -25,7 +22,3 @@ include = ["trip_planner*"]
 
 [tool.setuptools.package-data]
 trip_planner = ["prompts/*.txt", "templates/*.j2", "static/*.css"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-

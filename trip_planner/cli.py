@@ -48,7 +48,7 @@ def read_answers(path: Path) -> dict[str, str]:
         elif line.strip() and current:
             answers[current] += "\n" + line.strip()
     if "duration_days" not in answers or "destinations" not in answers:
-        raise ValueError("The answer file needs labeled Days: and Destinations: lines. See examples/trip_answers.txt.")
+        raise ValueError("The answer file needs labeled Days: and Destinations: lines. See the answer-file example in DOC.md.")
     return {field: answers.get(field, "") for field in ["trip_name", "duration_days", "destinations", "budget", "preferences"]}
 
 
