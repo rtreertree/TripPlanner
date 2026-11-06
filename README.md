@@ -60,7 +60,9 @@ Trips support 1–21 days. Defaults are one traveler, a balanced pace and no spe
 
 ## Files and documentation
 
-`main` contains this README, [DOC.md](DOC.md), the application package, timeout/recovery regression tests, and the configuration needed to install and run it. Prompts, the HTML template, CSS and the offline demo are included in the package. The [`secondary` branch](https://github.com/rtreertree/TripPlanner/tree/secondary) preserves the original repository, including its tests, examples, exported schemas, development lockfile and source documents.
+See [MANUAL.md](MANUAL.md) for the full project manual: overview, user flows and cases, technologies, system design, data contracts, and detailed component descriptions.
+
+`main` contains this README, [MANUAL.md](MANUAL.md), [DOC.md](DOC.md), the application package, timeout/recovery regression tests, and the configuration needed to install and run it. Prompts, the HTML template, CSS and the offline demo are included in the package. The [`secondary` branch](https://github.com/rtreertree/TripPlanner/tree/secondary) preserves the original repository, including its tests, examples, exported schemas, development lockfile and source documents.
 
 See [DOC.md](DOC.md) for configuration, optional commands, answer-file examples, storage, architecture, recovery and limitations. `trip_planner/models.py` defines the data contracts; JSON Schemas can be generated directly from those models.
 

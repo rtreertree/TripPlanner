@@ -2,10 +2,11 @@
 
 ## Repository layout
 
-`main` contains the runnable application and two documentation files: `README.md` for quick setup and this file for the complete operating and technical reference. The original repository is preserved on `secondary` at commit `273245ed84bbf8c64d169fd17c3f824bbe50ffe1`, including the original agent brief, implementation report, technical notes, tests, examples, schemas and development lockfile.
+`main` contains the runnable application and three documentation files: [README.md](README.md) for quick setup, [MANUAL.md](MANUAL.md) for the full project, user-flow, system-design and component guide, and this file for the operating and technical reference. The original repository is preserved on `secondary` at commit `273245ed84bbf8c64d169fd17c3f824bbe50ffe1`, including the original agent brief, implementation report, technical notes, tests, examples, schemas and development lockfile.
 
 ```text
 README.md
+MANUAL.md
 DOC.md
 pyproject.toml
 .env.example
