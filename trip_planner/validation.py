@@ -18,6 +18,7 @@ BUDGET_SCOPE = (
 
 def normalize_request(draft: RequestDraft) -> TripRequest:
     """Apply documented defaults only after resolving required and material details."""
+    # Keep the first spelling of each destination and preserve the requested route order.
     destinations = []
     for place in draft.destinations or []:
         place = place.strip()
@@ -68,12 +69,15 @@ def normalize_request(draft: RequestDraft) -> TripRequest:
 
 
 def _matches(first: str, second: str) -> bool:
+    """Match nonempty place labels when either normalized label contains the other."""
+    # Case-fold labels and collapse punctuation and whitespace before comparing substrings.
     clean = lambda value: re.sub(r"[^\w]+", " ", value.casefold()).strip()
     left, right = clean(first), clean(second)
     return bool(left and right and (left == right or left in right or right in left))
 
 
 def _route_matches(first: str, second: str) -> bool:
+    """Compare transfer endpoints while allowing word order to vary in a place label."""
     # Placeholder labels can reorder identical words between independent days,
     # e.g. "Assumed Kyoto hotel" and "Kyoto hotel (assumed)". Keep this narrow
     # allowance on transfer endpoints; destination coverage keeps its own rules.
@@ -83,6 +87,7 @@ def _route_matches(first: str, second: str) -> bool:
 
 
 def _zone(value: str):
+    """Resolve an IANA zone name or a signed UTC offset for schedule calculations."""
     if re.fullmatch(r"[+-]\d{2}:\d{2}", value):
         hours, minutes = map(int, value[1:].split(":"))
         if hours > 23 or minutes > 59:
@@ -95,6 +100,7 @@ def _zone(value: str):
 
 
 def _instant(local_time: str, zone: str, offset: int, base: date) -> datetime:
+    """Convert a local clock time and day offset into a UTC instant for comparison."""
     if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", local_time):
         raise ValueError(f"Use a 24-hour HH:MM time instead of {local_time!r}.")
     if offset < 0:
@@ -106,6 +112,7 @@ def _instant(local_time: str, zone: str, offset: int, base: date) -> datetime:
 
 
 def _cost_amount(cost, currency: str) -> Decimal | None:
+    """Validate the reporting currency and return the known amount as a decimal."""
     if cost.currency != currency:
         raise ValueError(f"Every cost must use the reporting currency {currency}.")
     if cost.amount is None:
@@ -120,6 +127,7 @@ def _check_visit_connections(day: DayPayload) -> None:
     previous = None
     transfers = []
     errors = []
+    # Accumulate travel legs between visits. Rest and free time can fall between legs.
     for item in day.schedule:
         if item.kind == "travel" and item.travel:
             transfers.append(item.travel)
@@ -142,6 +150,7 @@ def _check_visit_connections(day: DayPayload) -> None:
 
 
 def _check_days(payload: ItineraryPayload, request: TripRequest, *, complete: bool = True, isolated: bool = False) -> None:
+    """Check chronology, visit order, and transfers for a full trip, a prefix, or one day."""
     if complete and len(payload.days) != request.duration_days:
         raise ValueError(f"The itinerary must contain exactly {request.duration_days} days.")
     if len(payload.days) > request.duration_days:
@@ -155,6 +164,7 @@ def _check_days(payload: ItineraryPayload, request: TripRequest, *, complete: bo
         missing = [place for place in request.destinations if not any(_matches(place, included) for included in covered)]
         if missing:
             raise ValueError(f"The itinerary is missing requested destinations: {', '.join(missing)}. Explain feasibility or include them.")
+    # Carry time and transfer state across midnight to catch conflicts between adjacent days.
     previous_end = None
     previous_day = None
     visited_destinations = []
@@ -167,6 +177,7 @@ def _check_days(payload: ItineraryPayload, request: TripRequest, *, complete: bo
         if not day.title.strip() or not day.summary.strip() or not day.destinations or not day.schedule:
             raise ValueError(f"Day {day.day_number} needs a title, summary, destinations, and a usable schedule.")
         _check_visit_connections(day)
+        # Give undated days a shared calendar anchor so overnight times remain comparable.
         base = expected_date or date(2026, 1, 5) + timedelta(days=day.day_number - 1)
         for item in day.schedule:
             if not item.title.strip() or item.duration_minutes <= 0:
@@ -219,6 +230,7 @@ def _check_days(payload: ItineraryPayload, request: TripRequest, *, complete: bo
                        and any(_matches(route.destination, place) for place in day.destinations) for route in routes):
                 raise ValueError("A change of destination needs an explicit intercity transfer with scheduled travel time.")
         previous_day = day
+    # During generation, first visits need only match the leading part of the requested route.
     expected = request.destinations if complete else request.destinations[:len(visited_destinations)]
     if not isolated and not request.destination_delegated and visited_destinations != expected:
         if set(visited_destinations) == set(request.destinations):
@@ -265,8 +277,10 @@ def _has_transfer_route(day: DayPayload, origin: str, destination: str, minimum_
     endpoint = None
     travel_minutes = 0
     for item in day.schedule:
+        # Track the endpoint and travel minutes of a chain that began at the requested origin.
         leg = item.travel if item.kind == "travel" else None
         if leg is None:
+            # A visit away from the current endpoint breaks the chain. Waiting adds no travel time.
             if endpoint and item.kind in {"activity", "meal"} and not any(
                 _route_matches(endpoint, value) for value in (item.place_name, item.location) if value
             ):
@@ -322,6 +336,7 @@ def build_plan(payload: ItineraryPayload, request: TripRequest, trip_id: str,
         for item in day.schedule:
             # An AI may refer to an existing item, but cannot invent application IDs.
             item_id = item.id if item.id in old_items else None
+            # Recover an omitted ID from the first unused item with the same kind, title, and place.
             if item_id is None and previous:
                 match = next((old.id for old in old_items.values() if old.kind == item.kind
                               and old.title == item.title and old.place_name == item.place_name
@@ -332,6 +347,7 @@ def build_plan(payload: ItineraryPayload, request: TripRequest, trip_id: str,
                 raise ValueError("Schedule item IDs must be unique.")
             used_ids.add(item_id)
             schedule.append(item.model_copy(update={"id": item_id}))
+        # Both schedule items and separate day expenses contribute to the group estimate.
         for cost in [item.cost for item in schedule] + day.additional_costs:
             amount = _cost_amount(cost, request.currency)
             if amount is None:
@@ -381,6 +397,7 @@ def validate_plan(plan: SavedPlan) -> SavedPlan:
     ids = [item.id for day in plan.days for item in day.schedule]
     if any(not value for value in ids) or len(ids) != len(set(ids)):
         raise ValueError("Saved schedule items require unique stable IDs.")
+    # Recompute totals from itemized costs to detect inconsistent saved day or category totals.
     candidate = build_plan(ItineraryPayload(summary=plan.summary, days=[day.model_dump(exclude={"estimated_total_cost"}) for day in plan.days],
                                            assumptions=plan.assumptions, warnings=plan.warnings),
                            plan.request, plan.trip_id, generation=plan.generation)

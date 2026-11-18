@@ -15,11 +15,13 @@ from .validation import validate_plan
 
 
 def utc_now() -> str:
+    """Return the current UTC timestamp in the session's ISO 8601 format."""
     return datetime.now(timezone.utc).isoformat()
 
 
 class Session(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    # Generate the identifier when each session is created.
     trip_id: str = Field(default_factory=lambda: uuid4().hex)
     created_at: str = Field(default_factory=utc_now)
     updated_at: str = Field(default_factory=utc_now)
@@ -40,6 +42,7 @@ def atomic_json(path: Path, data: dict) -> None:
 
 
 def atomic_text(path: Path, content: str) -> None:
+    """Flush a temporary file beside the target, then replace the target atomically."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
@@ -58,10 +61,12 @@ def atomic_text(path: Path, content: str) -> None:
 
 class Store:
     def __init__(self, root: Path):
+        """Resolve the trip storage root and initialize its discovery warnings."""
         self.root = Path(root).resolve()
         self.warnings: list[str] = []
 
     def directory(self, trip_id: str) -> Path:
+        """Resolve a trip folder after checking its identifier and rejecting symlinks."""
         if not re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", trip_id):
             raise ValueError("Invalid saved-trip identifier.")
         path = self.root / trip_id
@@ -70,12 +75,14 @@ class Store:
         return path
 
     def save_session(self, session: Session) -> None:
+        """Timestamp the session and write its recovery state and conversation history."""
         session.updated_at = utc_now()
         folder = self.directory(session.trip_id)
         atomic_json(folder / "session.json", session.model_dump(mode="json"))
         atomic_json(folder / "conversation.json", {"messages": session.history})
 
     def load_session(self, trip_id: str) -> Session:
+        """Load the saved session or reconstruct a chat session from its committed plan."""
         folder = self.directory(trip_id)
         if (folder / "session.json").exists():
             session = Session.model_validate_json((folder / "session.json").read_text(encoding="utf-8"))
@@ -87,12 +94,14 @@ class Store:
                        draft=RequestDraft.model_validate(plan.request.model_dump()))
 
     def load_plan(self, trip_id: str) -> SavedPlan:
+        """Load the committed plan and check its identity, schedule, and budget totals."""
         plan = SavedPlan.model_validate_json((self.directory(trip_id) / "plan.json").read_text(encoding="utf-8"))
         if plan.trip_id != trip_id:
             raise ValueError("Saved plan identity does not match its folder.")
         return validate_plan(plan)
 
     def save_plan(self, plan: SavedPlan) -> None:
+        """Validate the revision and publish it after writing its history and request files."""
         validate_plan(plan)
         folder = self.directory(plan.trip_id)
         # Commit last. Extra history files from an interrupted write are ignored
@@ -102,12 +111,14 @@ class Store:
         atomic_json(folder / "plan.json", plan.model_dump(mode="json"))
 
     def previous_plan(self, current: SavedPlan) -> SavedPlan | None:
+        """Read the revision immediately before the current one, if one precedes it."""
         if current.revision <= 1:
             return None
         path = self.directory(current.trip_id) / "revisions" / f"{current.revision - 1:04d}.json"
         return SavedPlan.model_validate_json(path.read_text(encoding="utf-8"))
 
     def list_trips(self) -> list[dict]:
+        """List readable trips by latest session update and collect warnings for damaged entries."""
         self.warnings.clear()
         if not self.root.exists():
             return []
@@ -130,4 +141,5 @@ class Store:
                                 "status": "Plan" if plan else "Draft", "updated_at": session.updated_at})
             except (OSError, ValueError, ValidationError) as exc:
                 self.warnings.append(f"Could not read saved trip {folder.name}: {type(exc).__name__}. Its files were kept.")
+        # UTC timestamps from utc_now share a format, so text order gives recency.
         return sorted(entries, key=lambda entry: entry["updated_at"], reverse=True)

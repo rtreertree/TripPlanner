@@ -24,6 +24,7 @@ def plan_context(plan: SavedPlan) -> dict:
 
 class Planner:
     def __init__(self, config: Config, service: OpenAIService | None = None):
+        """Set up the planner's service and its record of usage across planning calls."""
         self.config = config
         self.service = service if service is not None else OpenAIService(config)
         self.last_metadata = None
@@ -39,6 +40,7 @@ class Planner:
         save_checkpoint: Callable[[dict], None] | None = None,
         progress: Callable[[str], None] | None = None,
     ) -> PlannerResult:
+        """Build or resume an itinerary by generating days concurrently and validating them in order."""
         self.last_metadata = None
         rules = files("trip_planner").joinpath("prompts/planning_rules.txt").read_text(encoding="utf-8")
         outline_prompt = files("trip_planner").joinpath("prompts/outline.txt").read_text(encoding="utf-8")
@@ -56,13 +58,16 @@ class Planner:
         state = deepcopy(checkpoint) if checkpoint and checkpoint.get("identity") == identity else {
             "identity": identity, "days": [], "ready_days": {}, "metadata": [],
         }
+        # Use a silent callback when the caller has no progress display.
         notify = progress or (lambda message: None)
 
         def save():
+            """Pass a snapshot to the checkpoint writer so later mutations cannot change it."""
             if save_checkpoint:
                 save_checkpoint(deepcopy(state))
 
         def call(prompt, data, response_model):
+            """Run an outline or repair request and checkpoint any usage it reports."""
             result = self.service.parse(role="planner", prompt=prompt, data=data,
                                         response_model=response_model, progress=progress)
             metadata = self.service.last_metadata
@@ -75,6 +80,7 @@ class Planner:
         if "outline" not in state:
             notify("Choosing the route and daily outline…")
             outline_feedback = feedback
+            # Feed the first validation error back into one outline repair attempt.
             for attempt in range(2):
                 outline = call(outline_prompt + "\n\n" + rules,
                                {**context, "validation_feedback": outline_feedback}, PlanningOutline)
@@ -96,6 +102,7 @@ class Planner:
         if days:
             validate_day_prefix(days, request)
             notify(f"Resuming with {len(days)} of {request.duration_days} days already saved.")
+        # The saved prefix is already validated. Later responses can be cached across gaps.
         pending = {key: DayPayload.model_validate(value) for key, value in state.get("ready_days", {}).items()}
         reused = set(state.get("reused_days", []))
         can_reuse = current is not None and current.request == request
@@ -110,6 +117,7 @@ class Planner:
         save()
 
         def day_data(entry, candidate=None, day_feedback=""):
+            """Assemble one day's prompt with its outline, available neighbors, and repair feedback."""
             number = entry.day_number
             return {
                 "validated_request": context["validated_request"],
@@ -151,6 +159,7 @@ class Planner:
             raise
         if clarification:
             return PlannerResult(itinerary=None, clarification_question=clarification, assistant_message="")
+        # Walk the outline in order so each new day is checked against its accepted predecessors.
         pending = {key: DayPayload.model_validate(value) for key, value in state["ready_days"].items()}
         for entry in entries:
             number, key = entry.day_number, str(entry.day_number)
@@ -162,6 +171,7 @@ class Planner:
                 # All network results are checkpointed already. Repair only the
                 # first invalid day with its fixed neighbors, keeping later results.
                 day_feedback = str(exc)
+                # A reused day may need a fresh generation and then a repair. Generated days get one repair.
                 attempts = 2 if key in reused else 1
                 for attempt in range(attempts):
                     state["invalid_day"] = {"feedback": day_feedback, "candidate": candidate.model_dump(mode="json")}
@@ -195,6 +205,7 @@ class Planner:
             state["reused_days"] = sorted(reused)
             save()
             notify(f"Saved Day {number} of {request.duration_days}.")
+        # Combine usage from all recorded calls, including retries and work from earlier runs.
         records = [RoleGeneration.model_validate(value) for value in state["metadata"]]
         if records:
             totals = {key: sum(getattr(record.usage, key) or 0 for record in records if record.usage)
@@ -211,9 +222,11 @@ class Planner:
         progress_events = SimpleQueue()
 
         def fetch(entry, data):
+            """Generate one day and allow one repair for a violation of its local rules."""
             for attempt in range(2):
                 result = self.service.parse(
                     role="planner", prompt=prompt, data=data, response_model=DayResult,
+                    # Queue the day's label with each update so only the coordinator invokes the UI callback.
                     progress=lambda message: progress_events.put(("progress", f"Day {entry.day_number}: {message}")),
                 )
                 # Even an invalid response is recoverable: persist it before its
@@ -238,6 +251,7 @@ class Planner:
         notify(f"Generating up to {workers} days at once…")
 
         def drain_events():
+            """Deliver queued progress and checkpoint worker responses on the calling thread."""
             while True:
                 try:
                     event = progress_events.get_nowait()
@@ -257,11 +271,13 @@ class Planner:
             running = {}
 
             def submit_next():
+                """Schedule the next missing day, if any, and track its future by outline entry."""
                 entry = next(iterator, None)
                 if entry is not None:
                     notify(f"Planning Day {entry.day_number}…")
                     running[executor.submit(fetch, entry, day_data(entry))] = entry
 
+            # Fill each worker slot once, then replenish slots as requests finish.
             for _ in range(workers):
                 submit_next()
             while running:
@@ -291,6 +307,7 @@ class Planner:
 
     @staticmethod
     def _validate_outline(outline, request):
+        """Check day numbering, route continuity, and first visits to requested destinations."""
         if [day.day_number for day in outline.days] != list(range(1, request.duration_days + 1)):
             raise ValueError(f"Include exactly {request.duration_days} consecutively numbered days.")
         if any(not day.destinations or not day.title.strip() for day in outline.days):
@@ -310,6 +327,7 @@ class Planner:
                                               and _matches(day.end_location, day.incoming_transfer.destination)):
                 raise ValueError("An incoming transfer must connect that day's start_location and end_location.")
         if not request.destination_delegated:
+            # Compare first appearances so repeated stops can span days without changing route order.
             visits = []
             for day in outline.days:
                 for destination in day.destinations:

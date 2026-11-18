@@ -37,6 +37,7 @@ class LeaveSession(Exception):
 class Application:
     def __init__(self, config, store: Store, interpreter, planner, *, no_open=False,
                  read=input, write=print, renderer=render_plan, browser=webbrowser.open):
+        """Connect trip storage and planning services to the terminal and page renderer."""
         self.config, self.store = config, store
         self.interpreter, self.planner = interpreter, planner
         self.no_open, self.read, self.write = no_open, read, write
@@ -45,9 +46,11 @@ class Application:
         self.plan: SavedPlan | None = None
 
     def say(self, message):
+        """Write a message with the assistant prefix used in the terminal conversation."""
         self.write(f"Assistant: {message}")
 
     def persist(self):
+        """Save session progress and let the traveler retry a failed disk write."""
         while True:
             try:
                 self.store.save_session(self.session)
@@ -58,9 +61,11 @@ class Application:
                     raise LeaveSession("The latest progress could not be saved; only previously saved work can be resumed.")
 
     def add_history(self, role, message):
+        """Append a speaker and message to the current session's conversation history."""
         self.session.history.append({"role": role, "content": message})
 
     def select_trip(self, reference=None):
+        """Start a trip or restore a saved session chosen by menu number or name."""
         entries = self.store.list_trips()
         for warning in self.store.warnings:
             self.say(warning)
@@ -100,12 +105,14 @@ class Application:
             self.say("Several trips match. Choose its number from the list." if len(matches) > 1 else "No matching trip. Choose a number or part of a trip name.")
 
     def new_trip(self):
+        """Check live planning credentials and save a fresh questionnaire session."""
         self.config.validate_live()
         self.session, self.plan = Session(), None
         self.persist()
         self.say("Tell me about your trip. Press Enter or type ‘skip’ for optional questions. Type ‘back’ to change the previous answer, or ‘help’ for examples. You can change the plan afterward.")
 
     def collect(self):
+        """Collect and persist each answer before handing the draft to the interpreter."""
         while self.session.prompt_index < len(PROMPTS):
             index = self.session.prompt_index
             field, label, optional = PROMPTS[index]
@@ -130,12 +137,14 @@ class Application:
                 continue
             self.session.answers[field] = "" if command == "skip" else answer
             self.session.skipped = [key for key, value in self.session.answers.items() if not value]
+            # After an edit, skip previously answered prompts, including explicit skips.
             self.session.prompt_index = next((i for i, (key, _, _) in enumerate(PROMPTS) if key not in self.session.answers), len(PROMPTS))
             self.persist()
         self.session.stage = "interpret"
         self.persist()
 
     def summary(self):
+        """Display the saved revision, route, group estimate, and itinerary warnings."""
         plan = self.plan
         budget = plan.budget_summary
         estimate = f"{budget.estimated_total:,.2f} {budget.currency}"
@@ -146,6 +155,7 @@ class Application:
             self.say(warning)
 
     def show_page(self, open_browser=False):
+        """Render the committed itinerary and record a failed render for a later retry."""
         path = self.store.directory(self.plan.trip_id) / "itinerary.html"
         try:
             # Always use the authoritative JSON, including on resume/render retry.
@@ -166,6 +176,7 @@ class Application:
                 self.say("The browser could not open automatically. Open the saved HTML path above.")
 
     def recover(self, message):
+        """Wait for a retry, cancellation, trip switch, or exit after an interruption."""
         self.say(message)
         while True:
             answer = self.read("You: ").strip()
@@ -185,6 +196,7 @@ class Application:
                 self.say("Type Retry or Exit" + (", or Cancel to keep the saved plan." if self.plan else "."))
 
     def interpret(self):
+        """Resolve the traveler's intent and prepare a validated request or a follow-up question."""
         self.say("Understanding your trip…" if not self.plan else "Understanding your message…")
         result = self.interpreter.interpret(answers=self.session.answers, draft=self.session.draft,
                     message=self.session.pending.get("message", ""), history=self.session.history[-12:],
@@ -208,6 +220,7 @@ class Application:
                 self.persist()
                 self.dispatch(result.intent, result.trip_reference)
             return
+        # Merge populated fields into the draft. Only an explicit clear can erase an optional value.
         updates = result.request_updates if self.plan else result.request_draft
         data = self.session.draft.model_dump()
         data.update(updates.model_dump(exclude_none=True))
@@ -246,6 +259,7 @@ class Application:
         self.persist()
 
     def generate(self):
+        """Resume planning from the session checkpoint and commit a validated itinerary."""
         from .models import TripRequest
         request = TripRequest.model_validate(self.session.pending["request"])
         budget_text = f"{request.budget:,.2f} {request.currency} for the whole group" if request.budget else f"no spending limit; estimates in {request.currency}"
@@ -253,6 +267,7 @@ class Application:
                  + (f"Starting {request.start_date}. " if request.start_date else "Using numbered days. ")
                  + "Creating your itinerary…")
         def save_checkpoint(state):
+            """Save the planner's latest progress with the pending request so it can resume."""
             self.session.pending["generation"] = state
             self.persist()
 
@@ -278,6 +293,7 @@ class Application:
         self.say(result.assistant_message or "The itinerary has been updated.")
 
     def commit(self, candidate):
+        """Save a revision before updating the session, reporting costs, and rendering the page."""
         # Retry only persistence if a validated candidate could not be saved.
         while True:
             try:
@@ -309,6 +325,7 @@ class Application:
             self.say('Try “Make Day 2 more relaxed” or “What can you do?”')
 
     def cancel(self):
+        """Discard pending edits and restore the committed request when one exists."""
         self.session.pending, self.session.clarification = {}, None
         self.session.stage = "chat" if self.plan else "clarify"
         if self.plan:
@@ -317,6 +334,7 @@ class Application:
         self.say("Pending changes canceled. Your saved plan is unchanged." if self.plan else "The trip details are saved. Tell me what to change.")
 
     def dispatch(self, action, reference=None):
+        """Handle terminal commands for navigation, display, recovery, and revision history."""
         if action == "exit":
             raise LeaveSession()
         if action == "help":
@@ -341,6 +359,7 @@ class Application:
                 self.say("There is no previous revision to restore.")
             else:
                 from .validation import payload_from_plan
+                # Use the older content with the current revision as its parent so undo preserves history.
                 previous = self.store.previous_plan(self.plan)
                 candidate = build_plan(payload_from_plan(previous), previous.request, self.plan.trip_id,
                                        previous=self.plan, generation=previous.generation, restored_from=previous)
@@ -348,6 +367,7 @@ class Application:
                 self.say("Restored the previous plan as a new saved revision.")
 
     def chat(self):
+        """Read one turn and handle local commands or queue a message for interpretation."""
         if self.session.stage == "clarify":
             self.say(self.session.clarification or "Tell me the trip details you want to change.")
         message = self.read("You: ").strip()
@@ -372,12 +392,14 @@ class Application:
         self.persist()
 
     def run(self, session=None, *, resume_operation=True):
+        """Drive the saved session through collection, interpretation, planning, and chat."""
         from .openai_service import AIServiceError
         try:
             if session:
                 self.session = session
                 folder = self.store.directory(session.trip_id)
                 self.plan = self.store.load_plan(session.trip_id) if (folder / "plan.json").exists() else None
+                # A newer committed revision means generation finished before the session write.
                 if self.plan and session.pending.get("base_revision", self.plan.revision) < self.plan.revision:
                     self.session.draft = RequestDraft.model_validate(self.plan.request.model_dump())
                     self.session.stage, self.session.pending, self.session.clarification = "chat", {}, None

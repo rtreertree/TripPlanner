@@ -30,6 +30,7 @@ class Config:
     planner_workers: int = 3
 
     def __post_init__(self):
+        """Check timing, retry, token, reasoning, and worker settings at construction."""
         for name, setting in (("timeout", "OPENAI_TIMEOUT_SECONDS"),
                               ("request_deadline", "OPENAI_REQUEST_DEADLINE_SECONDS")):
             if not math.isfinite(getattr(self, name)) or getattr(self, name) <= 0:
@@ -47,12 +48,14 @@ class Config:
 
     @classmethod
     def load(cls, env_file: str | Path | None = None) -> "Config":
+        """Read environment settings and use the shared model for roles without an override."""
         # Existing environment variables take precedence over an optional local file.
         load_dotenv(dotenv_path=env_file or Path.cwd() / ".env", override=False)
         model = os.getenv("OPENAI_MODEL", "").strip()
         effort = os.getenv("OPENAI_REASONING_EFFORT", "low").strip().lower()
 
         def number(name, default, convert):
+            """Convert a numeric setting and identify the offending variable on failure."""
             try:
                 return convert(os.getenv(name, str(default)))
             except ValueError:

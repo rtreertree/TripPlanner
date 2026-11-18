@@ -18,12 +18,14 @@ PACKAGE_DIR = Path(__file__).resolve().parent
 
 
 def _money(value: float | None, currency: str) -> str:
+    """Format a group estimate for display, keeping unknown amounts distinct from zero."""
     if value is None:
         return "Unknown"
     return f"{currency} {value:,.2f}"
 
 
 def _timestamp(value: str) -> str:
+    """Format a saved timestamp in UTC, preserving the input if parsing fails."""
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc).strftime("%d %b %Y, %H:%M UTC")
     except ValueError:
@@ -44,6 +46,7 @@ def render_plan(plan: SavedPlan, path: Path) -> Path:
     environment.filters["money"] = _money
     environment.filters["timestamp"] = _timestamp
     categories = plan.budget_summary.category_totals
+    # Scale category bars to the largest category. An all-zero budget gives every bar zero width.
     category_max = max(categories.values(), default=0) or 1
     category_bars = [
         {"name": name, "amount": amount, "width": round(amount / category_max * 100, 2)}
@@ -52,6 +55,7 @@ def render_plan(plan: SavedPlan, path: Path) -> Path:
     budget = plan.budget_summary
     budget_used = None
     if budget.budget_limit:
+        # Cap the budget bar at its full width even when the estimate exceeds the limit.
         budget_used = round(min(budget.estimated_total / budget.budget_limit * 100, 100), 2)
     page = environment.get_template("itinerary.html.j2").render(
         plan=plan,

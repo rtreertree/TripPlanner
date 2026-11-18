@@ -17,6 +17,7 @@ from .validation import validate_plan
 
 
 def parser():
+    """Build the parser for interactive planning and the four trip commands."""
     result = argparse.ArgumentParser(description="Describe a trip, view an itinerary, and refine it in terminal chat.")
     result.add_argument("--no-open", action="store_true", help="Do not automatically open a browser")
     result.add_argument("--output-dir", type=Path, help="Saved-trip directory (default: output)")
@@ -25,6 +26,7 @@ def parser():
                               ("chat", "Resume a saved plan"), ("render", "Render a saved plan offline"),
                               ("demo", "Create a clearly labeled offline example")]:
         command = commands.add_parser(name, help=description)
+        # Suppress subcommand defaults so flags given before the command keep their values.
         command.add_argument("--no-open", action="store_true", default=argparse.SUPPRESS)
         command.add_argument("--output-dir", type=Path, default=argparse.SUPPRESS)
         if name in {"chat", "render"}:
@@ -40,6 +42,7 @@ def read_answers(path: Path) -> dict[str, str]:
                "budget": "budget", "preferences": "preferences", "preferences / special requests": "preferences"}
     answers, current = {}, None
     for line in path.read_text(encoding="utf-8").splitlines():
+        # A recognized label starts a field. Other nonblank lines continue its answer.
         label, separator, value = line.partition(":")
         label = re.sub(r"\s*\(optional\)\s*", "", label, flags=re.IGNORECASE).strip().casefold()
         if separator and label in aliases:
@@ -53,6 +56,7 @@ def read_answers(path: Path) -> dict[str, str]:
 
 
 def open_page(path):
+    """Print the local itinerary path and ask the default browser to open it."""
     print(f"Infographic: {path.resolve()}")
     try:
         opened = webbrowser.open(path.resolve().as_uri())
@@ -63,6 +67,7 @@ def open_page(path):
 
 
 def main(argv=None):
+    """Run the selected trip command and return its process exit code."""
     args = parser().parse_args(argv)
     try:
         if args.command == "render":

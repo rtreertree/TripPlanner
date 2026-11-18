@@ -13,6 +13,7 @@ from trip_planner.validation import validate_day_outline, validate_independent_d
 
 
 def flight_day():
+    """Build a Bangkok-to-Chiang Mai fixture with a flight, two taxis, and an airport wait."""
     day = DayPayload(
         day_number=1, date=None, title="Fly to Chiang Mai", summary="A flight with airport transfers.",
         destinations=["Thailand"], additional_costs=[], notes=[], schedule=[
@@ -39,27 +40,32 @@ def flight_day():
 
 class TransferTests(unittest.TestCase):
     def test_city_journey_accepts_connected_airport_transfers(self):
+        """Validate the connected taxi, flight, and taxi legs as a single intercity journey."""
         day, outline, request = flight_day()
         validate_independent_day(day, request, outline)
 
     def test_direct_city_transfer_still_works(self):
+        """Replace the multi-leg airport journey with a direct flight covering the same route."""
         day, outline, _ = flight_day()
         day.schedule = [_transfer("Bangkok", "Chiang Mai", "10:30", "11:45", 1500, "Flight")] + day.schedule[4:]
         validate_day_outline(day, outline)
 
     def test_disconnected_airports_are_rejected(self):
+        """Move departure to a different airport and require the broken connection to be reported."""
         day, outline, _ = flight_day()
         day.schedule[2].travel.origin = "Don Mueang Airport"
         with self.assertRaisesRegex(ValueError, "incoming transfer"):
             validate_day_outline(day, outline)
 
     def test_wrong_destination_is_rejected(self):
+        """Divert the flight to Phuket and check that the original route requirement fails."""
         day, outline, _ = flight_day()
         day.schedule[2].travel.destination = "Phuket Airport"
         with self.assertRaisesRegex(ValueError, "incoming transfer"):
             validate_day_outline(day, outline)
 
     def test_waiting_and_schedule_buffers_do_not_count_as_travel_time(self):
+        """Shorten actual travel durations while preserving the longer scheduled time slots."""
         day, outline, _ = flight_day()
         for item in day.schedule:
             if item.travel:
@@ -68,6 +74,7 @@ class TransferTests(unittest.TestCase):
             validate_day_outline(day, outline)
 
     def test_unrelated_intermediate_visit_breaks_the_chain(self):
+        """Insert a meal away from the transfer endpoint and require a new connected route."""
         day, outline, _ = flight_day()
         day.schedule.insert(2, _item("meal", "Unrelated city visit", "08:30", "09:00", 0,
                                      "Restaurant in Bangkok", "Bangkok, Thailand"))
@@ -77,6 +84,7 @@ class TransferTests(unittest.TestCase):
 
 class TripDiscoveryTests(unittest.TestCase):
     def test_committed_recovery_supersedes_an_older_running_sessions_draft(self):
+        """Resume a stale generation session and check that the committed revision takes precedence."""
         with tempfile.TemporaryDirectory() as temporary:
             store = Store(Path(temporary))
             plan = demo_plan()
@@ -84,6 +92,7 @@ class TripDiscoveryTests(unittest.TestCase):
             stale = Session(trip_id=plan.trip_id, stage="generate", pending={"base_revision": 0})
             store.save_session(stale)
             app = Application(Config(), store, None, None, no_open=True,
+                              # Exit at the first prompt and discard terminal output to isolate session recovery.
                               read=lambda prompt: "Exit", write=lambda message: None)
             app.run(store.load_session(plan.trip_id))
             resumed = store.load_session(plan.trip_id)
@@ -92,6 +101,7 @@ class TripDiscoveryTests(unittest.TestCase):
             self.assertEqual(store.load_plan(plan.trip_id).revision, 1)
 
     def test_report_containers_and_unrelated_folders_are_not_trips(self):
+        """Mix trips with report folders and check only top-level trip records appear."""
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / "empty").mkdir()
@@ -108,6 +118,7 @@ class TripDiscoveryTests(unittest.TestCase):
             self.assertEqual(store.warnings, [])
 
     def test_corrupt_real_trip_still_reports_a_warning(self):
+        """Corrupt a session file and verify discovery identifies its folder in a warning."""
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             damaged = root / "damaged"

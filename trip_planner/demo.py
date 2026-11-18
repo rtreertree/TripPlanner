@@ -5,6 +5,7 @@ from .validation import build_plan, normalize_request
 
 
 def _item(kind, title, start, end, amount=0, place=None, location=None, travel=None, description=""):
+    """Build a same-day Tokyo-time example item with a group cost in yen."""
     start_minutes = int(start[:2]) * 60 + int(start[3:])
     end_minutes = int(end[:2]) * 60 + int(end[3:])
     category = "transport" if kind == "travel" else "food" if kind == "meal" else "activities"
@@ -19,6 +20,7 @@ def _item(kind, title, start, end, amount=0, place=None, location=None, travel=N
 
 
 def _transfer(origin, destination, start, end, amount, mode="train"):
+    """Build a sample transfer whose travel time fills the scheduled interval."""
     duration = (int(end[:2]) * 60 + int(end[3:])) - (int(start[:2]) * 60 + int(start[3:]))
     return _item("travel", f"{origin} → {destination}", start, end, amount,
                  travel=Travel(origin=origin, destination=destination, transport_mode=mode,
@@ -26,6 +28,7 @@ def _transfer(origin, destination, start, end, amount, mode="train"):
 
 
 def _city_day(number, city, morning, afternoon, lunch, dinner, title, summary):
+    """Assemble a city day with connected visits, meals, breaks, and a hotel estimate."""
     return DayPayload(
         day_number=number, date=None, title=title, summary=summary, destinations=[city],
         schedule=[
@@ -49,6 +52,7 @@ def _city_day(number, city, morning, afternoon, lunch, dinner, title, summary):
 
 
 def demo_plan():
+    """Build and validate the three-day offline itinerary for Tokyo and Kyoto."""
     request = normalize_request(RequestDraft(
         trip_name="Japan · food, temples & quiet corners", destinations=["Tokyo, Japan", "Kyoto, Japan"],
         duration_days=3, budget=75000, currency="JPY", travelers=1, travelers_explicit=True,

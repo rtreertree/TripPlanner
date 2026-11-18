@@ -12,6 +12,7 @@ from .planner import plan_context
 
 class Interpreter:
     def __init__(self, config: Config, service: OpenAIService | None = None):
+        """Use the supplied service or create one for the configured interpreter."""
         self.config = config
         self.service = service if service is not None else OpenAIService(config)
         self.last_metadata = None
@@ -27,6 +28,7 @@ class Interpreter:
         pending: dict | None = None,
         progress=None,
     ) -> InterpreterResult:
+        """Interpret a turn using local date, recent messages, and the active trip details."""
         self.last_metadata = None
         self.config.validate_live("interpreter")
         prompt = files("trip_planner").joinpath("prompts/interpreter.txt").read_text(encoding="utf-8")

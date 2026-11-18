@@ -40,6 +40,7 @@ def json_data(value: Any) -> str:
 
 class OpenAIService:
     def __init__(self, config: Config, client: Any = None):
+        """Prepare a shared SDK client slot and per-thread generation metadata."""
         self.config = config
         self._client = client
         self._client_lock = Lock()
@@ -48,13 +49,16 @@ class OpenAIService:
 
     @property
     def last_metadata(self) -> RoleGeneration | None:
+        """Return the latest successful generation record for the calling thread, if available."""
         return getattr(self._metadata, "value", None)
 
     @last_metadata.setter
     def last_metadata(self, value):
+        """Set or clear the generation record for the calling thread."""
         self._metadata.value = value
 
     def _get_client(self):
+        """Return the shared SDK client, creating it on the first live call."""
         # The SDK's HTTP client is shared; initialization and per-call metadata
         # must not race when several day requests start at the same time.
         with self._client_lock:
@@ -69,6 +73,7 @@ class OpenAIService:
 
     def parse(self, *, role: str, prompt: str, data: dict, response_model: type[Result],
               progress: Callable[[str], None] | None = None) -> Result:
+        """Stream a structured response, validate it, and record the model and token usage."""
         self.last_metadata = None
         self.config.validate_live(role)
         model = self.config.extractor_model if role == "interpreter" else self.config.planner_model
@@ -161,6 +166,7 @@ class OpenAIService:
 
     @staticmethod
     def _incomplete_message(reason, role):
+        """Explain an incomplete response and identify the role's token limit when applicable."""
         if reason == "max_output_tokens":
             setting = "OPENAI_EXTRACTOR_MAX_OUTPUT_TOKENS" if role == "interpreter" else "OPENAI_PLANNER_MAX_OUTPUT_TOKENS"
             return f"This step reached its output limit. Increase {setting}, then Retry. Completed work is saved."

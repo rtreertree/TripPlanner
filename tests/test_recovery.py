@@ -30,6 +30,7 @@ CONFIG = Config(api_key="test-key", extractor_model="test-model", planner_model=
 
 
 def fixtures():
+    """Derive matching plan, payload, and route outline fixtures from the offline demo."""
     plan = demo_plan()
     payload = payload_from_plan(plan)
     outline = PlanningOutline(
@@ -49,11 +50,13 @@ def fixtures():
 
 class ScriptedService:
     def __init__(self, results):
+        """Queue responses and exceptions in the order the test expects requests."""
         self.results = iter(results)
         self.calls = []
         self.last_metadata = None
 
     def parse(self, **kwargs):
+        """Record the call and replay the next scripted result with sample usage metadata."""
         self.calls.append(kwargs)
         value = next(self.results)
         if isinstance(value, Exception):
@@ -66,13 +69,16 @@ class ScriptedService:
 
 class PlanningTests(unittest.TestCase):
     def setUp(self):
+        """Prepare a fresh itinerary and an empty checkpoint for each recovery scenario."""
         self.plan, self.payload, self.outline = fixtures()
         self.saved = None
 
     def save(self, state):
+        """Snapshot the checkpoint for the next planner instance."""
         self.saved = deepcopy(state)
 
     def test_timeout_resumes_next_day_in_a_new_planner(self):
+        """Interrupt after Day 1 and check that a new planner resumes with Days 2 and 3."""
         first = ScriptedService([self.outline, DayResult(day=self.payload.days[0], clarification_question=None),
                                  AIServiceError("timeout")])
         with self.assertRaisesRegex(AIServiceError, "timeout"):
@@ -87,12 +93,14 @@ class PlanningTests(unittest.TestCase):
         build_plan(result.itinerary, self.plan.request, "resumed")
 
     def test_complete_checkpoint_needs_no_new_requests(self):
+        """Restore the original itinerary from a complete checkpoint with an empty response queue."""
         service = ScriptedService([self.outline] + [DayResult(day=day, clarification_question=None) for day in self.payload.days])
         Planner(CONFIG, service).plan(self.plan.request, save_checkpoint=self.save)
         result = Planner(CONFIG, ScriptedService([])).plan(self.plan.request, checkpoint=self.saved)
         self.assertEqual(result.itinerary, self.payload)
 
     def test_changed_instructions_invalidate_checkpoint(self):
+        """Change the edit instructions and require a new outline before generating days."""
         service = ScriptedService([self.outline, DayResult(day=self.payload.days[0], clarification_question=None), AIServiceError("timeout")])
         with self.assertRaises(AIServiceError):
             Planner(CONFIG, service).plan(self.plan.request, save_checkpoint=self.save)
@@ -101,6 +109,7 @@ class PlanningTests(unittest.TestCase):
         self.assertIs(next_service.calls[0]["response_model"], PlanningOutline)
 
     def test_edit_only_generates_changed_day(self):
+        """Request a Day 2 edit and verify both neighboring days survive the revision intact."""
         self.outline.days[0].reuse_existing = True
         self.outline.days[2].reuse_existing = True
         changed = self.payload.days[1].model_copy(deep=True)
@@ -113,6 +122,7 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual(candidate.days[2], self.plan.days[2])
 
     def test_constraint_change_prevents_reusing_stale_days(self):
+        """Change the traveler count and require fresh days even when the outline permits reuse."""
         request = self.plan.request.model_copy(update={"travelers": 2})
         for day in self.outline.days:
             day.reuse_existing = True
@@ -121,6 +131,7 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual(len(service.calls), 4)
 
     def test_transport_change_keeps_checkpoint(self):
+        """Raise timeout and output limits between attempts and resume with the two missing days."""
         service = ScriptedService([self.outline, DayResult(day=self.payload.days[0], clarification_question=None), AIServiceError("timeout")])
         with self.assertRaises(AIServiceError):
             Planner(CONFIG, service).plan(self.plan.request, save_checkpoint=self.save)
@@ -129,6 +140,7 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual(len(retry.calls), 2)
 
     def test_invalid_day_is_repaired_without_repeating_previous_days(self):
+        """Introduce a duration error on Day 2 and check the repair receives the validation reason."""
         broken = self.payload.days[1].model_copy(deep=True)
         broken.schedule[0].duration_minutes += 1
         service = ScriptedService([self.outline,
@@ -141,6 +153,7 @@ class PlanningTests(unittest.TestCase):
         self.assertIn("inconsistent", service.calls[3]["data"]["validation_feedback"])
 
     def test_interruption_during_repair_preserves_feedback(self):
+        """Interrupt a currency repair and verify retry rechecks the saved candidate for fresh feedback."""
         broken = self.payload.days[0].model_copy(deep=True)
         broken.schedule[0].cost.currency = "USD"
         service = ScriptedService([self.outline, DayResult(day=broken, clarification_question=None), AIServiceError("timeout")])
@@ -156,6 +169,7 @@ class PlanningTests(unittest.TestCase):
         self.assertIn("reporting currency", retry.calls[-1]["data"]["validation_feedback"])
 
     def test_country_trip_feedback_identifies_missing_visit_labels(self):
+        """Require the country label on an actual visit when the itinerary names a whole country."""
         request = self.plan.request.model_copy(update={"destinations": ["Japan"], "duration_days": 1})
         day = self.payload.days[0].model_copy(deep=True)
         day.destinations = ["Japan"]
@@ -167,6 +181,7 @@ class PlanningTests(unittest.TestCase):
         validate_day_prefix([day], request)
 
     def test_repeated_invalid_day_stops_after_one_repair(self):
+        """Return the same invalid duration twice and verify the day remains uncommitted."""
         broken = self.payload.days[0].model_copy(deep=True)
         broken.schedule[0].duration_minutes += 1
         service = ScriptedService([self.outline] + [DayResult(day=broken, clarification_question=None)] * 2)
@@ -176,6 +191,7 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual(self.saved["days"], [])
 
     def test_outline_clarification_does_not_generate_days(self):
+        """Stop at the outline's clarification question before issuing any day requests."""
         self.outline.clarification_question = "Add a day?"
         self.outline.days = []
         service = ScriptedService([self.outline])
@@ -184,6 +200,7 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual(len(service.calls), 1)
 
     def test_invalid_outline_gets_one_bounded_repair(self):
+        """Return an empty outline twice and check that the second failure ends the attempt."""
         self.outline.days = []
         service = ScriptedService([self.outline, self.outline])
         with self.assertRaisesRegex(AIServiceError, "outline"):
@@ -191,6 +208,7 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual(len(service.calls), 2)
 
     def test_dates_and_cross_day_transfers_are_checked(self):
+        """Reject a dated day in an undated trip and a city change with its transfer removed."""
         days = deepcopy(self.payload.days)
         days[1].date = self.plan.created_at[:10]
         with self.assertRaisesRegex(ValueError, "dates"):
@@ -201,8 +219,10 @@ class PlanningTests(unittest.TestCase):
             validate_day_prefix(days, self.plan.request)
 
     def test_application_persists_partial_days_then_commits_once(self):
+        """Reload a partial session from disk and verify retry produces the first revision and its page."""
         with tempfile.TemporaryDirectory() as folder:
             store = Store(Path(folder))
+            # Discard terminal output so the assertions exercise the saved files.
             app = Application(CONFIG, store, None, Planner(CONFIG, ScriptedService([
                 self.outline, DayResult(day=self.payload.days[0], clarification_question=None), AIServiceError("timeout")
             ])), no_open=True, write=lambda value: None)
@@ -221,6 +241,7 @@ class PlanningTests(unittest.TestCase):
             self.assertTrue((store.directory(session.trip_id) / "itinerary.html").exists())
 
     def test_interpreter_excludes_checkpoint_but_keeps_question_context(self):
+        """Inspect the interpreter input for budget context, bounded history, and checkpoint exclusion."""
         answer = InterpreterResult(intent="question", request_draft=RequestDraft(), request_updates=RequestDraft(),
                                    change_instructions="", trip_reference=None, missing_required_fields=[],
                                    clarification_question=None, assumptions=[], assistant_message="Estimate")
@@ -237,6 +258,7 @@ class PlanningTests(unittest.TestCase):
 
 class ConfigurationTests(unittest.TestCase):
     def test_loads_timing_and_output_settings_and_environment_wins(self):
+        """Set timing and token limits in a local file and override its timeout via the environment."""
         with tempfile.TemporaryDirectory() as folder:
             env = Path(folder) / ".env"
             env.write_text("OPENAI_TIMEOUT_SECONDS=120\nOPENAI_MAX_RETRIES=1\nOPENAI_REQUEST_DEADLINE_SECONDS=240\nOPENAI_PLANNER_MAX_OUTPUT_TOKENS=7000\n")
@@ -245,6 +267,7 @@ class ConfigurationTests(unittest.TestCase):
             self.assertEqual((config.timeout, config.max_retries, config.request_deadline, config.planner_max_output_tokens), (45, 1, 240, 7000))
 
     def test_rejects_invalid_settings_without_echoing_values(self):
+        """Check that configuration errors omit the invalid values supplied by the traveler."""
         for setting, value in [("OPENAI_TIMEOUT_SECONDS", "nan"), ("OPENAI_MAX_RETRIES", "4"),
                                ("OPENAI_TIMEOUT_SECONDS", "secret-value"), ("OPENAI_PLANNER_MAX_OUTPUT_TOKENS", "0")]:
             with self.subTest(setting=setting, value=value), tempfile.TemporaryDirectory() as folder:
@@ -255,7 +278,9 @@ class ConfigurationTests(unittest.TestCase):
 
 
 def sdk_client(events, requests):
+    """Build an SDK client that captures requests and replays a fixed event stream over HTTP."""
     def handle(request):
+        """Record the request body and encode the fixture events as a server-sent event stream."""
         requests.append(json.loads(request.content))
         body = "".join(f"event: {event['type']}\ndata: {json.dumps(event)}\n\n" for event in events)
         return httpx.Response(200, headers={"content-type": "text/event-stream"}, content=body)
@@ -263,6 +288,7 @@ def sdk_client(events, requests):
 
 
 def stream_events(status="completed", text=None, refusal=False):
+    """Construct creation and terminal events for success, refusal, or token exhaustion."""
     response = {"id": "resp_test", "created_at": 1, "object": "response", "model": "test-model",
                 "status": "in_progress", "output": [], "usage": {"input_tokens": 2, "output_tokens": 3, "total_tokens": 5}}
     created = {"type": "response.created", "response": deepcopy(response), "sequence_number": 0}
@@ -277,6 +303,7 @@ def stream_events(status="completed", text=None, refusal=False):
 
 class StreamingTests(unittest.TestCase):
     def test_real_sdk_parses_structured_stream_without_storing(self):
+        """Round-trip a typed result and inspect storage, token limit, and usage settings."""
         requests = []
         result = DayResult(day=None, clarification_question="Add a day?")
         client = sdk_client(stream_events(text=result.model_dump_json()), requests)
@@ -289,11 +316,13 @@ class StreamingTests(unittest.TestCase):
         self.assertEqual(service.last_metadata.usage.total_tokens, 5)
 
     def test_incomplete_stream_gives_actionable_output_limit(self):
+        """Simulate token exhaustion and check the error names the interpreter's output setting."""
         with sdk_client(stream_events(status="incomplete"), []) as client:
             with self.assertRaisesRegex(AIServiceError, "OPENAI_EXTRACTOR_MAX_OUTPUT_TOKENS"):
                 OpenAIService(CONFIG, client).parse(role="interpreter", prompt="test", data={}, response_model=DayResult)
 
     def test_refusal_and_invalid_json_are_safe(self):
+        """Exercise refusal and malformed output while checking that raw response text stays private."""
         for events, message in [(stream_events(refusal=True), "declined"),
                                 (stream_events(text="invalid-json-secret"), "invalid structured")]:
             with self.subTest(message=message), sdk_client(events, []) as client:
@@ -302,16 +331,20 @@ class StreamingTests(unittest.TestCase):
                 self.assertNotIn("invalid-json-secret", str(raised.exception))
 
     def test_early_stream_end_is_recoverable(self):
+        """End the stream after creation and require a recoverable error."""
         with sdk_client(stream_events()[:1], []) as client:
             with self.assertRaisesRegex(AIServiceError, "ended early"):
                 OpenAIService(CONFIG, client).parse(role="planner", prompt="test", data={}, response_model=DayResult)
 
     def test_midstream_read_timeout_is_caught(self):
+        """Raise a read timeout after the connection opens and check the user-facing error."""
         class BrokenBody(httpx.SyncByteStream):
             def __iter__(self):
+                """Yield an initial stream heartbeat, then simulate a stalled connection."""
                 yield b": connected\n\n"
                 raise httpx.ReadTimeout("provider-secret")
         client = OpenAI(api_key="test-key", max_retries=0, http_client=httpx.Client(transport=httpx.MockTransport(
+            # Return a streaming body whose read fails after the initial heartbeat.
             lambda request: httpx.Response(200, headers={"content-type": "text/event-stream"}, stream=BrokenBody())
         )))
         with client, self.assertRaisesRegex(AIServiceError, "stopped responding") as raised:
@@ -319,6 +352,7 @@ class StreamingTests(unittest.TestCase):
         self.assertNotIn("provider-secret", str(raised.exception))
 
     def test_deadline_closes_stream(self):
+        """Advance the mock clock beyond the request deadline and check for a time-limit error."""
         with sdk_client(stream_events()[:1], []) as client:
             with patch("trip_planner.openai_service.monotonic", side_effect=[0, 301]):
                 with self.assertRaisesRegex(AIServiceError, "time limit"):
