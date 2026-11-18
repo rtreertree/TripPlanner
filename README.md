@@ -3,6 +3,7 @@
 Describe a trip in the terminal and open a day-by-day itinerary in your browser. You can ask why a stop was included, change a day, or return to an earlier revision.
 
 > ▶ **[Watch the Local Trip Planner video on YouTube](https://www.youtube.com/watch?v=cMlg8V54Uzo)**
+
 > ▶ **[See self assesment form (require chula.ac.th email login)](https://docs.google.com/spreadsheets/d/1jAhf9tX7GaT31XohICvmVyuJv9Jn4SFEBaTGJivHAFc/edit?usp=sharing)**
 
 
